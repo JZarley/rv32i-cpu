@@ -15,11 +15,6 @@ TB_TOP="${MODULE}_tb"
 SIM="obj_dir/V${MODULE}_tb"
 NETLIST="results/synth_${MODULE}.v"
 
-TOTAL_IN=0
-TOTAL_OUT=0
-TOTAL_STALLS=0
-TOTAL_SIMULTANEOUS=0
-
 if [ ! -f "$RTL" ]; then
     echo "Missing RTL: $RTL"
     exit 1
