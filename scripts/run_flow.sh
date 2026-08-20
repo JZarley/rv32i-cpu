@@ -8,6 +8,7 @@ fi
 
 MODULE="$1"
 
+PKG="rtl/riscv_pkg.sv"
 RTL="rtl/${MODULE}.sv"
 TB="tb/${MODULE}_tb.sv"
 TB_TOP="${MODULE}_tb"
@@ -28,13 +29,14 @@ fi
 mkdir -p results
 
 echo "[1/4] Linting $MODULE"
-if ! verilator --lint-only "$RTL" > results/lint.log 2>&1; then
+if ! verilator --lint-only "$PKG" "$RTL" > results/lint.log 2>&1; then
     cat results/lint.log
     exit 1
 fi
 
 echo "[2/4] Building simulation"
 if ! verilator --binary --timing --assert --trace \
+    "$PKG" \
     "$RTL" \
     "$TB" \
     --top-module "$TB_TOP" > results/build.log 2>&1; then
