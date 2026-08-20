@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module imm_gen(
     input logic [31:0] instr,
     input riscv_pkg::imm_sel_t imm_sel,
