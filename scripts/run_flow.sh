@@ -14,6 +14,7 @@ TB="tb/${MODULE}_tb.sv"
 TB_TOP="${MODULE}_tb"
 SIM="obj_dir/V${MODULE}_tb"
 NETLIST="results/synth_${MODULE}.v"
+SV2V_OUT="results/${MODULE}_sv2v.v"
 SEED=${2:-1}
 
 if [ ! -f "$RTL" ]; then
@@ -51,8 +52,20 @@ if ! "./$SIM" +verilator+seed+"$SEED" > results/sim.log 2>&1; then
 fi
 
 echo "[4/4] Synthesizing $MODULE"
-if ! yosys -p "read_verilog -sv $RTL; synth -top $MODULE; write_verilog $NETLIST" \
-    > results/synthesis.log 2>&1; then
+
+if ! sv2v \
+    "$PKG" \
+    "$RTL" \
+    > "$SV2V_OUT"; then
+    echo "sv2v conversion failed"
+    exit 1
+fi
+
+if ! yosys -p "
+    read_verilog $SV2V_OUT;
+    synth -top $MODULE;
+    write_verilog $NETLIST
+" > results/synthesis.log 2>&1; then
     cat results/synthesis.log
     exit 1
 fi
