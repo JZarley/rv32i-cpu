@@ -144,7 +144,32 @@ module decoder (
                 
             end
             OPCODE_STORE: begin
+                alu_op      = ALU_ADD;
+                imm_sel     = IMM_S;
+                wb_sel      = WB_ALU; // (don't care)
+                pc_sel      = PC_SEQ;
+                branch_op   = BR_NONE;
+                alu_src_imm = 1'b1;
+                reg_write   = 1'b0;
                 
+                unique case (funct3)
+                    3'b000: begin
+                        //sb
+                        mem_op = MEM_SB;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b001: begin
+                        //sh
+                        mem_op = MEM_SH;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b010: begin
+                        //sw
+                        mem_op = MEM_SW;
+                        illegal_instr = 1'b0;
+                    end
+                    default: ;
+                endcase
             end
             OPCODE_OP: begin
                 imm_sel = IMM_I;
