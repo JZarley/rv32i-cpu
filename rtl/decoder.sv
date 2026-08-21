@@ -268,7 +268,47 @@ module decoder (
                 
             end
             OPCODE_BRANCH: begin
+                alu_op      = ALU_ADD; // unused for branch decode 
+                imm_sel     = IMM_B;
+                wb_sel      = WB_ALU; //unused
+                mem_op      = MEM_NONE;
+                pc_sel      = PC_BRANCH;
+                alu_src_imm = 1'b0;
+                reg_write   = 1'b0;
                 
+                unique case (funct3)
+                    3'b000: begin
+                        //beq
+                        branch_op = BR_EQ;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b001: begin
+                        //bne
+                        branch_op = BR_NE;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b100: begin
+                        //blt
+                        branch_op = BR_LT;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b101: begin
+                        //bge
+                        branch_op = BR_GE;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b110: begin
+                        //bltu
+                        branch_op = BR_LTU;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b111: begin
+                        //bgeu
+                        branch_op = BR_GEU;
+                        illegal_instr = 1'b0;
+                    end
+                    default: ;
+                endcase                
             end
             OPCODE_JALR: begin
                 
