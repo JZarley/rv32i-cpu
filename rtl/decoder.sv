@@ -9,8 +9,9 @@ module decoder (
     output riscv_pkg::branch_op_t branch_op,
 
     output logic alu_src_imm,
-    output logic reg_write
-)
+    output logic reg_write,
+    output logic illegal_instr
+);
 
     import riscv_pkg::*;
 
@@ -31,79 +32,193 @@ module decoder (
         branch_op   = BR_NONE;
         alu_src_imm = 1'b0;
         reg_write   = 1'b0;
+        illegal_instr = 1'b1;
 
         unique case (opcode)
             OPCODE_LOAD: begin
-                a
+                
             end
             OPCODE_OP_IMM: begin
-                a
-            end
-            OPCODE_AUIPC: begin
-                a
-            end
-            OPCODE_STORE: begin
-                a
-            end
-            OPCODE_OP: begin
-                alu_src_imm = 0;
-                reg_write = 1;
+                imm_sel = IMM_I;
                 wb_sel = WB_ALU;
                 mem_op = MEM_NONE;
+                pc_sel = PC_SEQ;
+                branch_op = BR_NONE;
+                alu_src_imm = 1'b1;
+                reg_write = 1'b1;
+
+                unique case (funct3)
+                    3'b000:  begin
+                        alu_op = ALU_ADD;
+                        illegal_instr = 1'b0;
+                        //addi
+                    end
+                    3'b001: begin
+                        //slli only
+                        unique case (funct7)
+                            7'b0000000: begin
+                                alu_op = ALU_SLL;
+                                illegal_instr = 1'b0;
+                            end
+                            default: ;
+                        endcase
+                    end
+                    3'b010: begin
+                        //slti only
+                        alu_op = ALU_SLT;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b011: begin
+                        //sltiu only
+                        alu_op = ALU_SLTU;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b100: begin
+                        //xori only
+                        alu_op = ALU_XOR;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b101: begin
+                        //srli, srai, all zeroes, 01'0
+                        unique case (funct7)
+                            7'b0000000: begin
+                                alu_op = ALU_SRL;
+                                illegal_instr = 1'b0;
+                            end
+                            7'b0100000: begin
+                                alu_op = ALU_SRA;
+                                illegal_instr = 1'b0;
+                            end
+                            default: ;
+                        endcase
+                    end
+                    3'b110: begin
+                        //ori only
+                        alu_op = ALU_OR;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b111: begin
+                        //andi only
+                        alu_op = ALU_AND;
+                        illegal_instr = 1'b0;
+                    end
+                    default: ;
+                endcase
+            end
+            OPCODE_AUIPC: begin
+                
+            end
+            OPCODE_STORE: begin
+                
+            end
+            OPCODE_OP: begin
+                imm_sel = IMM_I;
+                wb_sel = WB_ALU;
+                mem_op = MEM_NONE;
+                pc_sel = PC_SEQ;
+                branch_op = BR_NONE;
+                alu_src_imm = 1'b0;
+                reg_write = 1'b1;
 
                 unique case (funct3)
                     3'b000: begin
                         unique case (funct7)
                             7'b0000000: begin
                                 alu_op = ALU_ADD;
+                                illegal_instr = 1'b0;
                             end
                             7'b0100000: begin
                                 alu_op = ALU_SUB;
+                                illegal_instr = 1'b0;
                             end
+                            default: ;
                         endcase
                     end
                     3'b001: begin
-                        alu_op = ALU_SLL;
+                        unique case (funct7)
+                            7'b0000000: begin
+                                alu_op = ALU_SLL;
+                                illegal_instr = 1'b0;
+                            end
+                            default: ;
+                        endcase
                     end
                     3'b010: begin
-                        alu_op = ALU_SLT;
+                        unique case (funct7)
+                            7'b0000000: begin
+                                alu_op = ALU_SLT;
+                                illegal_instr = 1'b0;
+                            end
+                            default: ;
+                        endcase
                     end
                     3'b011: begin
-                        alu_op = ALU_SLTU;
+                        unique case (funct7)
+                            7'b0000000: begin
+                                alu_op = ALU_SLTU;
+                                illegal_instr = 1'b0;
+                            end
+                            default: ;
+                        endcase
                     end
                     3'b100: begin
-                        alu_op = ALU_XOR;
+                        unique case (funct7)
+                            7'b0000000: begin
+                                alu_op = ALU_XOR;
+                                illegal_instr = 1'b0;
+                            end
+                            default: ;
+                        endcase
                     end
                     3'b101: begin
                         unique case (funct7)
                             7'b0000000: begin
                                 alu_op = ALU_SRL;
+                                illegal_instr = 1'b0;
                             end
                             7'b0100000: begin
                                 alu_op = ALU_SRA;
+                                illegal_instr = 1'b0;
                             end
+                            default: ;
                         endcase
                     end
                     3'b110: begin
-                        alu_op = ALU_OR;
+                        unique case (funct7)
+                            7'b0000000: begin
+                                alu_op = ALU_OR;
+                                illegal_instr = 1'b0;
+                            end
+                            default: ;
+                        endcase
                     end
                     3'b111: begin
-                        alu_op = ALU_AND;
+                        unique case (funct7)
+                            7'b0000000: begin
+                                alu_op = ALU_AND;
+                                illegal_instr = 1'b0;
+                            end
+                            default: ;
+                        endcase
                     end
+                    default: ;
                 endcase
             end
             OPCODE_LUI: begin
-                a
+                
             end
             OPCODE_BRANCH: begin
-                a
+                
             end
             OPCODE_JALR: begin
-                a
+                
             end
             OPCODE_JAL: begin
-                a
+                
             end
+            default: ;
         endcase
+
+        reg_write = reg_write && !illegal_instr;
     end
 endmodule
