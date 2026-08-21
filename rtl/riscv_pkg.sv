@@ -26,7 +26,8 @@ package riscv_pkg;
     typedef enum logic [1:0] {
         WB_ALU,
         WB_MEM,
-        WB_PC4
+        WB_PC4,
+        WB_IMM
     } wb_sel_t;
 
     typedef enum logic [3:0] {
@@ -57,6 +58,16 @@ package riscv_pkg;
         BR_LTU,
         BR_GEU
     } branch_op_t;
+
+    typedef enum logic {
+        ALU_A_RS1,
+        ALU_A_PC
+    } alu_a_sel_t;
+
+    typedef enum logic {
+        ALU_B_RS2,
+        ALU_B_IMM
+    } alu_b_sel_t;
 
     localparam logic [6:0] OPCODE_LOAD   = 7'b0000011;
     localparam logic [6:0] OPCODE_OP_IMM = 7'b0010011;

@@ -7,8 +7,9 @@ module decoder (
     output riscv_pkg::mem_op_t mem_op,
     output riscv_pkg::pc_sel_t pc_sel,
     output riscv_pkg::branch_op_t branch_op,
+    output riscv_pkg::alu_a_sel_t alu_a_sel,
+    output riscv_pkg::alu_b_sel_t alu_b_sel,
 
-    output logic alu_src_imm,
     output logic reg_write,
     output logic illegal_instr
 );
@@ -30,10 +31,11 @@ module decoder (
         mem_op      = MEM_NONE;
         pc_sel      = PC_SEQ;
         branch_op   = BR_NONE;
-        alu_src_imm = 1'b0;
+        alu_a_sel   = ALU_A_RS1;
+        alu_b_sel   = ALU_B_RS2;
         reg_write   = 1'b0;
         illegal_instr = 1'b1;
-
+        //note: eventually, remove the don't cares from each case when it's fully intuitive
         unique case (opcode)
             OPCODE_LOAD: begin
                 alu_op      = ALU_ADD;
@@ -41,7 +43,8 @@ module decoder (
                 wb_sel      = WB_MEM;
                 pc_sel      = PC_SEQ;
                 branch_op   = BR_NONE;
-                alu_src_imm = 1'b1;
+                alu_a_sel   = ALU_A_RS1;
+                alu_b_sel   = ALU_B_IMM;
                 reg_write   = 1'b1;
                 
                 unique case (funct3)
@@ -79,7 +82,8 @@ module decoder (
                 mem_op = MEM_NONE;
                 pc_sel = PC_SEQ;
                 branch_op = BR_NONE;
-                alu_src_imm = 1'b1;
+                alu_a_sel = ALU_A_RS1;
+                alu_b_sel = ALU_B_IMM;
                 reg_write = 1'b1;
 
                 unique case (funct3)
@@ -141,7 +145,16 @@ module decoder (
                 endcase
             end
             OPCODE_AUIPC: begin
-                
+                alu_op          = ALU_ADD;
+                imm_sel         = IMM_U;
+                wb_sel          = WB_ALU;
+                mem_op          = MEM_NONE;
+                pc_sel          = PC_SEQ;
+                branch_op       = BR_NONE;
+                alu_a_sel       = ALU_A_PC;
+                alu_b_sel       = ALU_B_IMM;
+                reg_write       = 1'b1;
+                illegal_instr   = 1'b0;
             end
             OPCODE_STORE: begin
                 alu_op      = ALU_ADD;
@@ -149,7 +162,8 @@ module decoder (
                 wb_sel      = WB_ALU; // (don't care)
                 pc_sel      = PC_SEQ;
                 branch_op   = BR_NONE;
-                alu_src_imm = 1'b1;
+                alu_a_sel   = ALU_A_RS1;
+                alu_b_sel   = ALU_B_IMM;
                 reg_write   = 1'b0;
                 
                 unique case (funct3)
@@ -177,7 +191,8 @@ module decoder (
                 mem_op = MEM_NONE;
                 pc_sel = PC_SEQ;
                 branch_op = BR_NONE;
-                alu_src_imm = 1'b0;
+                alu_a_sel = ALU_A_RS1;
+                alu_b_sel = ALU_B_RS2;
                 reg_write = 1'b1;
 
                 unique case (funct3)
@@ -265,7 +280,16 @@ module decoder (
                 endcase
             end
             OPCODE_LUI: begin
-                
+                alu_op          = ALU_ADD; // don't care
+                imm_sel         = IMM_U;
+                wb_sel          = WB_IMM;
+                mem_op          = MEM_NONE;
+                pc_sel          = PC_SEQ;
+                branch_op       = BR_NONE;
+                alu_a_sel       = ALU_A_RS1; // don't care
+                alu_b_sel       = ALU_B_RS2; // DC
+                reg_write       = 1'b1;
+                illegal_instr   = 1'b0;
             end
             OPCODE_BRANCH: begin
                 alu_op      = ALU_ADD; // unused for branch decode 
@@ -273,7 +297,8 @@ module decoder (
                 wb_sel      = WB_ALU; //unused
                 mem_op      = MEM_NONE;
                 pc_sel      = PC_BRANCH;
-                alu_src_imm = 1'b0;
+                alu_a_sel   = ALU_A_RS1;
+                alu_b_sel   = ALU_B_RS2;
                 reg_write   = 1'b0;
                 
                 unique case (funct3)
@@ -311,16 +336,17 @@ module decoder (
                 endcase                
             end
             OPCODE_JALR: begin
+                alu_op          = ALU_ADD; //likely used, unlike jal
+                imm_sel         = IMM_I;
+                wb_sel          = WB_PC4;
+                mem_op          = MEM_NONE;
+                pc_sel          = PC_JALR;
+                branch_op       = BR_NONE;
+                alu_a_sel       = ALU_A_RS1;
+                alu_b_sel       = ALU_B_IMM; // likely used
+                reg_write       = 1'b1;
                 unique case (funct3)
                     3'b000: begin
-                        alu_op          = ALU_ADD; //likely used, unlike jal
-                        imm_sel         = IMM_I;
-                        wb_sel          = WB_PC4;
-                        mem_op          = MEM_NONE;
-                        pc_sel          = PC_JALR;
-                        branch_op       = BR_NONE;
-                        alu_src_imm     = 1'b1; // likely used
-                        reg_write       = 1'b1;
                         illegal_instr   = 1'b0;
                     end
                     default: ;
@@ -333,7 +359,8 @@ module decoder (
                 mem_op          = MEM_NONE;
                 pc_sel          = PC_JAL;
                 branch_op       = BR_NONE;
-                alu_src_imm     = 1'b1; // likely, don't care
+                alu_a_sel       = ALU_A_RS1;
+                alu_b_sel       = ALU_B_IMM; // likely don't care
                 reg_write       = 1'b1;
                 illegal_instr   = 1'b0;
             end
