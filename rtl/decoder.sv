@@ -311,10 +311,31 @@ module decoder (
                 endcase                
             end
             OPCODE_JALR: begin
-                
+                unique case (funct3)
+                    3'b000: begin
+                        alu_op          = ALU_ADD; //likely used, unlike jal
+                        imm_sel         = IMM_I;
+                        wb_sel          = WB_PC4;
+                        mem_op          = MEM_NONE;
+                        pc_sel          = PC_JALR;
+                        branch_op       = BR_NONE;
+                        alu_src_imm     = 1'b1; // likely used
+                        reg_write       = 1'b1;
+                        illegal_instr   = 1'b0;
+                    end
+                    default: ;
+                endcase
             end
             OPCODE_JAL: begin
-                
+                alu_op          = ALU_ADD; // don't care, likely
+                imm_sel         = IMM_J;
+                wb_sel          = WB_PC4;
+                mem_op          = MEM_NONE;
+                pc_sel          = PC_JAL;
+                branch_op       = BR_NONE;
+                alu_src_imm     = 1'b1; // likely, don't care
+                reg_write       = 1'b1;
+                illegal_instr   = 1'b0;
             end
             default: ;
         endcase
