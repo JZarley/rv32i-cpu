@@ -36,7 +36,42 @@ module decoder (
 
         unique case (opcode)
             OPCODE_LOAD: begin
+                alu_op      = ALU_ADD;
+                imm_sel     = IMM_I;
+                wb_sel      = WB_MEM;
+                pc_sel      = PC_SEQ;
+                branch_op   = BR_NONE;
+                alu_src_imm = 1'b1;
+                reg_write   = 1'b1;
                 
+                unique case (funct3)
+                    3'b000: begin
+                        //lb
+                        mem_op = MEM_LB;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b001: begin
+                        //lh
+                        mem_op = MEM_LH;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b010: begin
+                        //lw
+                        mem_op = MEM_LW;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b100: begin
+                        //lbu
+                        mem_op = MEM_LBU;
+                        illegal_instr = 1'b0;
+                    end
+                    3'b101: begin
+                        //lhu
+                        mem_op = MEM_LHU;
+                        illegal_instr = 1'b0;
+                    end
+                    default: ;
+                endcase
             end
             OPCODE_OP_IMM: begin
                 imm_sel = IMM_I;
