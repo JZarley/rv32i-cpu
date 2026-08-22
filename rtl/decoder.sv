@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module decoder (
     input logic [31:0] instruction,
 

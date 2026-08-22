@@ -1,3 +1,5 @@
+`timescale 1ns/1ps
+
 module branch_compare (
     input logic [31:0] rs1_data,
     input logic [31:0] rs2_data,
