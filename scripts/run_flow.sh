@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+if [ "$#" -lt 1 ]; then
     echo "Usage: $0 MODULE"
     exit 1
 fi
 
 MODULE="$1"
+SEED=${2:-1}
+
+if [ "$#" -ge 2 ]; then
+    shift 2
+else
+    shift 1
+fi
+
+SIM_ARGS=("$@")
 
 DEPS=(
     rtl/riscv_pkg.sv
@@ -24,7 +33,6 @@ TB_TOP="${MODULE}_tb"
 SIM="obj_dir/V${MODULE}_tb"
 NETLIST="results/synth_${MODULE}.v"
 SV2V_OUT="results/${MODULE}_sv2v.v"
-SEED=${2:-1}
 
 if [ ! -f "$RTL" ]; then
     echo "Missing RTL: $RTL"
@@ -35,6 +43,13 @@ if [ ! -f "$TB" ]; then
     echo "Missing testbench: $TB"
     exit 1
 fi
+
+for dep in "${RTL_DEPS[@]}"; do
+    if [ ! -f "$dep" ]; then
+        echo "Missing RTL dependency: $dep"
+        exit 1
+    fi
+done
 
 mkdir -p results
 
@@ -55,7 +70,9 @@ if ! verilator --binary --timing --assert --trace \
 fi
 
 echo "[3/4] Running simulation (seed=$SEED)"
-if ! "./$SIM" +verilator+seed+"$SEED" > results/sim.log 2>&1; then
+if ! "./$SIM" +verilator+seed+"$SEED" \
+    "${SIM_ARGS[@]}" \
+    > results/sim.log 2>&1; then
     cat results/sim.log
     exit 1
 fi
