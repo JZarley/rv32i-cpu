@@ -2,7 +2,7 @@
 
 module rv32i_system_tb;
     import riscv_pkg::*;
-    
+
     localparam logic [31:0] IMEM_BASE = 32'h8000_0000;
 
     logic clk;
@@ -12,6 +12,9 @@ module rv32i_system_tb;
     logic [31:0] imem_rdata;
 
     logic [31:0] imem [0:255];
+
+    string program_hex;
+    int instr_count;
 
     rv32i_system dut (
         .clk(clk),
@@ -23,7 +26,15 @@ module rv32i_system_tb;
     always #5 clk = ~clk;
 
     initial begin
-        $readmemh("programs/memory_smoke.hex", imem);
+        if (!$value$plusargs("PROGRAM_HEX=%s", program_hex)) begin
+            $fatal(1, "Missing +PROGRAM_HEX=<path>");
+        end
+
+        if (!$value$plusargs("INSTR_COUNT=%d", instr_count)) begin
+            $fatal(1, "Missing +INSTR_COUNT=<n>");
+        end
+
+        $readmemh(program_hex, imem);
     end
 
     always_comb begin
@@ -39,7 +50,7 @@ module rv32i_system_tb;
         reset = 1'b0;
 
         // Execute 3 instructions
-        repeat (6) @(posedge clk);
+        repeat (instr_count) @(posedge clk);
         $finish;
     end
 
