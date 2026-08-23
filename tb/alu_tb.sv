@@ -7,16 +7,16 @@ module alu_tb;
     logic [31:0] a;
     logic [31:0] b;
     alu_op_t     alu_op;
-    logic [31:0] result;
+    logic [31:0] alu_result;
 
     alu dut (
         .a      (a),
         .b      (b),
         .alu_op (alu_op),
-        .result (result)
+        .alu_result (alu_result)
     );
 
-    task automatic check_result(
+    task automatic check_alu_result(
         input alu_op_t     op,
         input logic [31:0] operand_a,
         input logic [31:0] operand_b,
@@ -29,7 +29,7 @@ module alu_tb;
             alu_op = op;
             #1;
 
-            assert (result == expected)
+            assert (alu_result == expected)
                 else $fatal(
                     1,
                     "%s failed: a=%h b=%h expected=%h actual=%h",
@@ -37,7 +37,7 @@ module alu_tb;
                     operand_a,
                     operand_b,
                     expected,
-                    result
+                    alu_result
                 );
         end
     endtask
@@ -49,7 +49,7 @@ module alu_tb;
 
         //--------------------------------------------------
         // ADD
-        check_result(
+        check_alu_result(
             ALU_ADD,
             32'd10,
             32'd25,
@@ -57,7 +57,7 @@ module alu_tb;
             "ADD basic"
         );
 
-        check_result(
+        check_alu_result(
             ALU_ADD,
             32'hFFFF_FFFF,
             32'd1,
@@ -67,7 +67,7 @@ module alu_tb;
 
         //--------------------------------------------------
         // SUB
-        check_result(
+        check_alu_result(
             ALU_SUB,
             32'd25,
             32'd10,
@@ -75,7 +75,7 @@ module alu_tb;
             "SUB basic"
         );
 
-        check_result(
+        check_alu_result(
             ALU_SUB,
             32'd0,
             32'd1,
@@ -85,7 +85,7 @@ module alu_tb;
 
         //--------------------------------------------------
         // AND
-        check_result(
+        check_alu_result(
             ALU_AND,
             32'hF0F0_AA55,
             32'h0FF0_0F0F,
@@ -95,7 +95,7 @@ module alu_tb;
 
         //--------------------------------------------------
         // OR
-        check_result(
+        check_alu_result(
             ALU_OR,
             32'hF000_00F0,
             32'h0F00_0F00,
@@ -105,7 +105,7 @@ module alu_tb;
 
         //--------------------------------------------------
         // XOR
-        check_result(
+        check_alu_result(
             ALU_XOR,
             32'hFFFF_0000,
             32'h0F0F_0F0F,
@@ -115,7 +115,7 @@ module alu_tb;
 
         //--------------------------------------------------
         // SLL
-        check_result(
+        check_alu_result(
             ALU_SLL,
             32'h0000_0001,
             32'd4,
@@ -123,7 +123,7 @@ module alu_tb;
             "SLL basic"
         );
 
-        check_result(
+        check_alu_result(
             ALU_SLL,
             32'h0000_0001,
             32'd31,
@@ -133,7 +133,7 @@ module alu_tb;
 
         // Only b[4:0] is used.
         // 35 decimal -> low 5 bits = 3.
-        check_result(
+        check_alu_result(
             ALU_SLL,
             32'h0000_0001,
             32'd35,
@@ -143,7 +143,7 @@ module alu_tb;
 
         //--------------------------------------------------
         // SRL
-        check_result(
+        check_alu_result(
             ALU_SRL,
             32'h8000_0000,
             32'd1,
@@ -151,7 +151,7 @@ module alu_tb;
             "SRL zero fill"
         );
 
-        check_result(
+        check_alu_result(
             ALU_SRL,
             32'hFFFF_FFFF,
             32'd4,
@@ -161,7 +161,7 @@ module alu_tb;
 
         //--------------------------------------------------
         // SRA
-        check_result(
+        check_alu_result(
             ALU_SRA,
             32'h8000_0000,
             32'd1,
@@ -169,7 +169,7 @@ module alu_tb;
             "SRA sign extension"
         );
 
-        check_result(
+        check_alu_result(
             ALU_SRA,
             32'hFFFF_FFF8,
             32'd1,
@@ -177,7 +177,7 @@ module alu_tb;
             "SRA negative eight"
         );
 
-        check_result(
+        check_alu_result(
             ALU_SRA,
             32'h4000_0000,
             32'd1,
@@ -187,7 +187,7 @@ module alu_tb;
 
         //--------------------------------------------------
         // SLT - signed comparison
-        check_result(
+        check_alu_result(
             ALU_SLT,
             32'hFFFF_FFFF, // -1
             32'h0000_0001, // +1
@@ -195,7 +195,7 @@ module alu_tb;
             "SLT signed true"
         );
 
-        check_result(
+        check_alu_result(
             ALU_SLT,
             32'h0000_0001,
             32'hFFFF_FFFF, // -1
@@ -203,7 +203,7 @@ module alu_tb;
             "SLT signed false"
         );
 
-        check_result(
+        check_alu_result(
             ALU_SLT,
             32'h8000_0000, // most negative signed 32-bit value
             32'h7FFF_FFFF, // largest positive signed 32-bit value
@@ -213,7 +213,7 @@ module alu_tb;
 
         //--------------------------------------------------
         // SLTU - unsigned comparison
-        check_result(
+        check_alu_result(
             ALU_SLTU,
             32'hFFFF_FFFF,
             32'h0000_0001,
@@ -221,7 +221,7 @@ module alu_tb;
             "SLTU unsigned false"
         );
 
-        check_result(
+        check_alu_result(
             ALU_SLTU,
             32'h0000_0001,
             32'hFFFF_FFFF,
@@ -231,7 +231,7 @@ module alu_tb;
 
         //--------------------------------------------------
         // Equality cases
-        check_result(
+        check_alu_result(
             ALU_SLT,
             32'h1234_5678,
             32'h1234_5678,
@@ -239,7 +239,7 @@ module alu_tb;
             "SLT equality"
         );
 
-        check_result(
+        check_alu_result(
             ALU_SLTU,
             32'h1234_5678,
             32'h1234_5678,
