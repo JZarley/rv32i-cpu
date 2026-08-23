@@ -5,18 +5,37 @@ import sys
 from pathlib import Path
 
 
-SPIKE_RE = re.compile(
+SPIKE_BASE_RE = re.compile(
     r"core\s+\d+:\s+\d+\s+"
     r"0x([0-9a-fA-F]+)\s+"
     r"\(0x([0-9a-fA-F]+)\)"
-    r"(?:\s+x(\d+)\s+0x([0-9a-fA-F]+))?"
+    r"(.*)"
+)
+
+SPIKE_RD_RE = re.compile(
+    r"^\s*x(\d+)\s+0x([0-9a-fA-F]+)"
+)
+
+SPIKE_MEM_RE = re.compile(
+    r"\bmem\s+0x([0-9a-fA-F]+)"
+    r"(?:\s+0x([0-9a-fA-F]+))?"
 )
 
 RTL_RE = re.compile(
     r"COMMIT\s+"
     r"pc=([0-9a-fA-F]+)\s+"
     r"instr=([0-9a-fA-F]+)"
-    r"(?:\s+rd=(\d+)\s+rd_data=([0-9a-fA-F]+))?"
+    r"(.*)"
+)
+
+RTL_RD_RE = re.compile(
+    r"\brd=(\d+)\s+rd_data=([0-9a-fA-F]+)"
+)
+
+RTL_MEM_RE = re.compile(
+    r"\bmem_addr=([0-9a-fA-F]+)"
+    r"(?:\s+mem_wdata=([0-9a-fA-F]+)"
+    r"\s+mem_wstrb=([0-9a-fA-F]+))?"
 )
 
 
@@ -24,18 +43,37 @@ def parse_spike(path):
     commits = []
 
     for line in Path(path).read_text().splitlines():
-        match = SPIKE_RE.fullmatch(line.strip())
+        match = SPIKE_BASE_RE.fullmatch(line.strip())
 
         if not match:
             continue
 
-        pc, instr, rd, rd_data = match.groups()
+        pc, instr, rest = match.groups()
+
+        rd = None
+        rd_data = None
+        mem_addr = None
+        mem_wdata = None
+
+        rd_match = SPIKE_RD_RE.search(rest)
+        if rd_match:
+            rd = int(rd_match.group(1))
+            rd_data = int(rd_match.group(2), 16)
+
+        mem_match = SPIKE_MEM_RE.search(rest)
+        if mem_match:
+            mem_addr = int(mem_match.group(1), 16)
+
+            if mem_match.group(2) is not None:
+                mem_wdata = int(mem_match.group(2), 16)
 
         commits.append({
             "pc": int(pc, 16),
             "instr": int(instr, 16),
-            "rd": int(rd) if rd is not None else None,
-            "rd_data": int(rd_data, 16) if rd_data is not None else None,
+            "rd": rd,
+            "rd_data": rd_data,
+            "mem_addr": mem_addr,
+            "mem_wdata": mem_wdata,
         })
 
     return commits
@@ -50,13 +88,32 @@ def parse_rtl(path):
         if not match:
             continue
 
-        pc, instr, rd, rd_data = match.groups()
+        pc, instr, rest = match.groups()
+
+        rd = None
+        rd_data = None
+        mem_addr = None
+        mem_wdata = None
+
+        rd_match = RTL_RD_RE.search(rest)
+        if rd_match:
+            rd = int(rd_match.group(1))
+            rd_data = int(rd_match.group(2), 16)
+
+        mem_match = RTL_MEM_RE.search(rest)
+        if mem_match:
+            mem_addr = int(mem_match.group(1), 16)
+
+            if mem_match.group(2) is not None:
+                mem_wdata = int(mem_match.group(2), 16)
 
         commits.append({
             "pc": int(pc, 16),
             "instr": int(instr, 16),
-            "rd": int(rd) if rd is not None else None,
-            "rd_data": int(rd_data, 16) if rd_data is not None else None,
+            "rd": rd,
+            "rd_data": rd_data,
+            "mem_addr": mem_addr,
+            "mem_wdata": mem_wdata,
         })
 
     return commits
