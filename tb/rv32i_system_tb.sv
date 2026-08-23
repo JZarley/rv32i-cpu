@@ -38,7 +38,7 @@ module rv32i_system_tb;
         reset = 1'b0;
 
         // Execute 3 instructions
-        repeat (3) @(posedge clk);
+        repeat (4) @(posedge clk);
 
         #1;
 
@@ -62,6 +62,27 @@ module rv32i_system_tb;
 
         $display("RV32I smoke test passed.");
         $finish;
+    end
+
+    always @(posedge clk) begin
+        if (!reset) begin
+            if (dut.core.reg_write && (dut.core.rd_addr != 5'd0)) begin
+                $display(
+                    "COMMIT pc=%08x instr=%08x rd=%0d rd_data=%08x",
+                    dut.core.pc,
+                    imem_rdata,
+                    dut.core.rd_addr,
+                    dut.core.rd_data
+                );
+            end
+            else begin
+                $display(
+                    "COMMIT pc=%08x instr=%08x",
+                    dut.core.pc,
+                    imem_rdata
+                );
+            end
+        end
     end
 
 endmodule
