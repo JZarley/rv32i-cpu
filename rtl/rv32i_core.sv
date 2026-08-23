@@ -1,6 +1,8 @@
 `timescale 1ns/1ps
 //note: add explicit connections? or improve naming conventions to be able to use .* for most modules
-module rv32i_core (
+module rv32i_core #(
+    parameter logic [31:0] RESET_PC = 32'h8000_0000
+) (
     input logic clk,
     input logic reset,
 
@@ -112,7 +114,7 @@ module rv32i_core (
     
     always_ff @(posedge clk) begin
         if (reset) begin
-            pc <= '0;
+            pc <= RESET_PC;
         end
         else begin
             pc <= next_pc;
