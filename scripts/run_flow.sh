@@ -8,7 +8,16 @@ fi
 
 MODULE="$1"
 
-PKG="rtl/riscv_pkg.sv"
+DEPS=(
+    rtl/riscv_pkg.sv
+    rtl/rv32i_core.sv
+    rtl/data_memory.sv
+    rtl/branch_compare.sv
+    rtl/alu.sv
+    rtl/decoder.sv
+    rtl/imm_gen.sv
+    rtl/regfile.sv
+)
 RTL="rtl/${MODULE}.sv"
 TB="tb/${MODULE}_tb.sv"
 TB_TOP="${MODULE}_tb"
@@ -30,14 +39,14 @@ fi
 mkdir -p results
 
 echo "[1/4] Linting $MODULE"
-if ! verilator --lint-only "$PKG" "$RTL" > results/lint.log 2>&1; then
+if ! verilator --lint-only "${DEPS[@]}" "$RTL" > results/lint.log 2>&1; then
     cat results/lint.log
     exit 1
 fi
 
 echo "[2/4] Building simulation"
 if ! verilator --binary --timing --assert --trace \
-    "$PKG" \
+    "${DEPS[@]}" \
     "$RTL" \
     "$TB" \
     --top-module "$TB_TOP" > results/build.log 2>&1; then
@@ -54,7 +63,7 @@ fi
 echo "[4/4] Synthesizing $MODULE"
 
 if ! sv2v \
-    "$PKG" \
+    "${DEPS[@]}" \
     "$RTL" \
     > "$SV2V_OUT"; then
     echo "sv2v conversion failed"
