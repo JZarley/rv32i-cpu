@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 module data_memory #(
-    parameter logic BASE_ADDR = 32'h8000_0000,
+    parameter logic [31:0] BASE_ADDR = 32'h8000_0000,
     parameter int MEM_BYTES = 1024
 ) (
     input logic clk,
