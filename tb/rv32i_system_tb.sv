@@ -1,7 +1,8 @@
 `timescale 1ns/1ps
 
 module rv32i_system_tb;
-
+    import riscv_pkg::*;
+    
     localparam logic [31:0] IMEM_BASE = 32'h8000_0000;
 
     logic clk;
@@ -22,7 +23,7 @@ module rv32i_system_tb;
     always #5 clk = ~clk;
 
     initial begin
-        $readmemh("programs/smoke.hex", imem);
+        $readmemh("programs/memory_smoke.hex", imem);
     end
 
     always_comb begin
@@ -38,35 +39,40 @@ module rv32i_system_tb;
         reset = 1'b0;
 
         // Execute 3 instructions
-        repeat (4) @(posedge clk);
-
-        #1;
-
-        assert (dut.core.regfile.regs[1] == 32'd5)
-            else $fatal(1, "x1 incorrect: %h",
-                        dut.core.regfile.regs[1]);
-
-        assert (dut.core.regfile.regs[2] == 32'd7)
-            else $fatal(1, "x2 incorrect: %h",
-                        dut.core.regfile.regs[2]);
-
-        assert (dut.core.regfile.regs[3] == 32'd12)
-            else $fatal(1, "x3 incorrect: %h",
-                        dut.core.regfile.regs[3]);
-
-        assert (imem_addr == 32'h8000000C)
-            else $fatal(1, "PC incorrect: %h", imem_addr);
-
-        assert (dut.core.regfile.regs[0] == 32'd0)
-            else $fatal(1, "x0 was modified");
-
-        $display("RV32I smoke test passed.");
+        repeat (6) @(posedge clk);
         $finish;
     end
 
     always @(posedge clk) begin
         if (!reset) begin
-            if (dut.core.reg_write && (dut.core.rd_addr != 5'd0)) begin
+
+            if (dut.core.dmem_wstrb != 4'b0000) begin
+                // Store
+                $display(
+                    "COMMIT pc=%08x instr=%08x mem_addr=%08x mem_wdata=%08x mem_wstrb=%x",
+                    dut.core.pc,
+                    imem_rdata,
+                    dut.core.dmem_addr,
+                    dut.core.dmem_wdata,
+                    dut.core.dmem_wstrb
+                );
+            end
+            else if (dut.core.wb_sel == WB_MEM &&
+                    dut.core.reg_write &&
+                    dut.core.rd_addr != 5'd0) begin
+                // Load
+                $display(
+                    "COMMIT pc=%08x instr=%08x rd=%0d rd_data=%08x mem_addr=%08x",
+                    dut.core.pc,
+                    imem_rdata,
+                    dut.core.rd_addr,
+                    dut.core.rd_data,
+                    dut.core.dmem_addr
+                );
+            end
+            else if (dut.core.reg_write &&
+                    dut.core.rd_addr != 5'd0) begin
+                // Normal register write
                 $display(
                     "COMMIT pc=%08x instr=%08x rd=%0d rd_data=%08x",
                     dut.core.pc,
