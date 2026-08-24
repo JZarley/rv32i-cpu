@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [ "$#" -lt 1 ]; then
-    echo "Usage: $0 MODULE"
+    echo "Usage: $0 MODULE [SEED] [SIM_ARGS...]"
     exit 1
 fi
 
@@ -44,7 +44,7 @@ if [ ! -f "$TB" ]; then
     exit 1
 fi
 
-for dep in "${RTL_DEPS[@]}"; do
+for dep in "${DEPS[@]}"; do
     if [ ! -f "$dep" ]; then
         echo "Missing RTL dependency: $dep"
         exit 1
