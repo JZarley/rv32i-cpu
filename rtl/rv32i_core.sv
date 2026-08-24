@@ -49,7 +49,7 @@ module rv32i_core #(
 
     regfile regfile(
         .*,
-        .rd_write(reg_write) // note: need writeback to be safe?
+        .rd_write(effective_reg_write)
     );
 
     logic branch_taken;
@@ -142,26 +142,50 @@ module rv32i_core #(
     end
 
     assign dmem_addr = alu_result;
+    logic mem_misaligned;
+    logic effective_reg_write;
+
+    always_comb begin
+        mem_misaligned = 1'b0;
+
+        unique case (mem_op)
+            MEM_LH,
+            MEM_LHU,
+            MEM_SH: begin
+                mem_misaligned = dmem_addr[0];
+            end
+
+            MEM_LW,
+            MEM_SW: begin
+                mem_misaligned = |dmem_addr[1:0];
+            end
+
+            default: ;
+        endcase
+    end
+
+    assign effective_reg_write = reg_write && !mem_misaligned;
 
     always_comb begin
         dmem_wdata = '0;
         dmem_wstrb = '0;
-
-        unique case (mem_op)
-            MEM_SB: begin
-                dmem_wdata = {24'b0, rs2_data[7:0]} << (8 * dmem_addr[1:0]);
-                dmem_wstrb = 4'b0001 << dmem_addr[1:0];
-            end
-            MEM_SH: begin
-                dmem_wdata = {16'b0, rs2_data[15:0]} << (8 * dmem_addr[1:0]);
-                dmem_wstrb = 4'b0011 << dmem_addr[1:0];
-            end
-            MEM_SW: begin
-                dmem_wdata = rs2_data;
-                dmem_wstrb = 4'b1111;
-            end
-            default: ;
-        endcase
+        if (!mem_misaligned) begin
+            unique case (mem_op)
+                MEM_SB: begin
+                    dmem_wdata = {24'b0, rs2_data[7:0]} << (8 * dmem_addr[1:0]);
+                    dmem_wstrb = 4'b0001 << dmem_addr[1:0];
+                end
+                MEM_SH: begin
+                    dmem_wdata = {16'b0, rs2_data[15:0]} << (8 * dmem_addr[1:0]);
+                    dmem_wstrb = 4'b0011 << dmem_addr[1:0];
+                end
+                MEM_SW: begin
+                    dmem_wdata = rs2_data;
+                    dmem_wstrb = 4'b1111;
+                end
+                default: ;
+            endcase
+        end
     end
 
     logic [7:0] load_byte;
