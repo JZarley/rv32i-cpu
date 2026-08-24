@@ -369,6 +369,11 @@ module decoder (
             default: ;
         endcase
 
-        reg_write = reg_write && !illegal_instr;
+        if (illegal_instr) begin
+            reg_write = 1'b0;
+            mem_op = MEM_NONE;
+            pc_sel = PC_SEQ;
+            branch_op = BR_NONE;
+        end
     end
 endmodule

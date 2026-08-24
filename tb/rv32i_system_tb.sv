@@ -68,7 +68,16 @@ module rv32i_system_tb;
     
     always @(posedge clk) begin
         if (!reset) begin
+            if (dut.core.rs1_addr == 5'd0) begin
+                assert (dut.core.rs1_data == 32'd0)
+                    else $fatal(1, "x0 returned nonzero data on rs1 port");
+            end
 
+            if (dut.core.rs2_addr == 5'd0) begin
+                assert (dut.core.rs2_data == 32'd0)
+                    else $fatal(1, "x0 returned nonzero data on rs2 port");
+            end
+            
             if (dut.core.dmem_wstrb != 4'b0000) begin
                 // Store
                 $display(
