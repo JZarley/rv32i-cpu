@@ -54,6 +54,19 @@ module rv32i_system_tb;
         $finish;
     end
 
+    logic [31:0] trace_store_data;
+
+    always_comb begin
+        trace_store_data = '0;
+
+        unique case (dut.core.mem_op)
+            MEM_SB: trace_store_data = {24'b0, dut.core.rs2_data[7:0]};
+            MEM_SH: trace_store_data = {16'b0, dut.core.rs2_data[15:0]};
+            MEM_SW: trace_store_data = dut.core.rs2_data;
+            default: ;
+        endcase
+    end
+    
     always @(posedge clk) begin
         if (!reset) begin
 
@@ -64,7 +77,7 @@ module rv32i_system_tb;
                     dut.core.pc,
                     imem_rdata,
                     dut.core.dmem_addr,
-                    dut.core.dmem_wdata,
+                    trace_store_data,
                     dut.core.dmem_wstrb
                 );
             end
@@ -101,5 +114,4 @@ module rv32i_system_tb;
             end
         end
     end
-
 endmodule
