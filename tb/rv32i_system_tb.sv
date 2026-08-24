@@ -49,7 +49,6 @@ module rv32i_system_tb;
         @(negedge clk);
         reset = 1'b0;
 
-        // Execute 3 instructions
         repeat (instr_count) @(posedge clk);
         $finish;
     end

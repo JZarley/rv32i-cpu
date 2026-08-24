@@ -169,7 +169,7 @@ module rv32i_core #(
     always_comb begin
         dmem_wdata = '0;
         dmem_wstrb = '0;
-        if (!mem_misaligned) begin
+        if (!mem_misaligned && !illegal_instr) begin
             unique case (mem_op)
                 MEM_SB: begin
                     dmem_wdata = {24'b0, rs2_data[7:0]} << (8 * dmem_addr[1:0]);
