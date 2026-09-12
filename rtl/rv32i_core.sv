@@ -17,6 +17,90 @@ module rv32i_core #(
 
     import riscv_pkg::*;
 
+    typedef struct packed {
+        logic valid;
+        logic [31:0] pc;
+        logic [31:0] instr;
+    } if_id_t;
+
+    typedef struct packed {
+        logic valid;
+
+        logic [31:0] pc;
+
+        logic [4:0] rs1;
+        logic [4:0] rs2;
+        logic [4:0] rd;
+
+        logic [31:0] rs1_data;
+        logic [31:0] rs2_data;
+        logic [31:0] imm;
+
+        alu_op_t alu_op;
+        alu_a_sel_t alu_a_sel;
+        alu_b_sel_t alu_b_sel;
+
+        branch_op_t branch_op;
+        pc_sel_t pc_sel;
+
+        mem_op_t mem_op;
+        wb_sel_t wb_sel;
+
+        logic reg_write;
+    } id_ex_t;
+
+    typedef struct packed {
+        logic valid;
+
+        logic [31:0] alu_result;
+        logic [31:0] store_data;
+        logic [31:0] pc_plus_4;
+
+        logic [4:0] rd;
+
+        mem_op_t mem_op;
+        wb_sel_t wb_sel;
+
+        logic reg_write;
+    } ex_mem_t;
+
+    typedef struct packed {
+        logic valid;
+
+        logic [4:0] rd;
+        logic reg_write;
+
+        logic [31:0] wb_value;
+    } mem_wb_t;
+
+    if_id_t  if_id_q,  if_id_d;
+    id_ex_t  id_ex_q,  id_ex_d;
+    ex_mem_t ex_mem_q, ex_mem_d;
+    mem_wb_t mem_wb_q, mem_wb_d;
+
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            if_id_q = '0;
+            id_ex_q = '0;
+            ex_mem_q = '0;
+            mem_wb_q = '0;
+        end
+        else begin
+            if_id_q = if_id_d;
+            id_ex_q = id_ex_d;
+            ex_mem_q = ex_mem_d;
+            mem_wb_q = mem_wb_d;
+        end
+    end
+
+    //temporary
+    always_comb begin
+        if_id_d = '0;
+        id_ex_d = '0;
+        ex_mem_d = '0;
+        mem_wb_d = '0;
+    end
+
     logic [31:0] pc;
     logic [31:0] next_pc;
 
