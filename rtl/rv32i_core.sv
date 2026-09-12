@@ -97,7 +97,6 @@ module rv32i_core #(
 
     //temporary
     always_comb begin
-        id_ex_d = id_ex_q;
         ex_mem_d = ex_mem_q;
         mem_wb_d = mem_wb_q;
     end
@@ -108,6 +107,33 @@ module rv32i_core #(
         if_id_d.valid = 1'b1;
         if_id_d.pc = pc_q;
         if_id_d.instr = imem_rdata;
+    end
+
+    always_comb begin
+        id_ex_d = '0;
+
+        id_ex_d.valid = if_id_q.valid;
+        id_ex_d.pc = if_id_q.pc;
+
+        id_ex_d.rs1 = rs1_addr;
+        id_ex_d.rs2 = rs2_addr;
+        id_ex_d.rd = rd_addr;
+
+        id_ex_d.rs1_data = rs1_data;
+        id_ex_d.rs2_data = rs2_data;
+        id_ex_d.imm = imm;
+
+        id_ex_d.alu_op = alu_op;
+        id_ex_d.alu_a_sel = alu_a_sel;
+        id_ex_d.alu_b_sel = alu_b_sel;
+
+        id_ex_d.branch_op = branch_op;
+        id_ex_d.pc_sel = pc_sel;
+
+        id_ex_d.mem_op = mem_op;
+        id_ex_d.wb_sel = wb_sel;
+
+        id_ex_d.reg_write = reg_write;
     end
     
     always_ff @(posedge clk) begin
@@ -123,20 +149,22 @@ module rv32i_core #(
         imem_addr = pc_q;
 
         pc_d = pc_q + 32'd4;
-        unique case (pc_sel)
-                PC_SEQ: ;
-                PC_BRANCH: begin
-                    if (branch_taken) begin
-                        pc_d = if_id_q.pc + imm;
+        if (id_ex_q.valid) begin
+            unique case (id_ex_q.pc_sel)
+                    PC_SEQ: ;
+                    PC_BRANCH: begin
+                        if (branch_taken) begin
+                            pc_d = id_ex_q.pc + id_ex_q.imm;
+                        end
                     end
-                end
-                PC_JAL: begin
-                    pc_d = if_id_q.pc + imm;
-                end
-                PC_JALR: begin
-                    pc_d = (rs1_data + imm) & 32'hFFFF_FFFE;
-                end
-        endcase
+                    PC_JAL: begin
+                        pc_d = id_ex_q.pc + id_ex_q.imm;
+                    end
+                    PC_JALR: begin
+                        pc_d = (id_ex_q.rs1_data + id_ex_q.imm) & 32'hFFFF_FFFE;
+                    end
+            endcase
+        end
     end
 
     riscv_pkg::alu_op_t alu_op;
@@ -152,7 +180,18 @@ module rv32i_core #(
 
     decoder decoder(
         .instruction(if_id_q.instr),
-        .*
+
+        .alu_op(alu_op),
+        .imm_sel(imm_sel),
+        .wb_sel(wb_sel),
+        .mem_op(mem_op),
+        .pc_sel(pc_sel),
+        .branch_op(branch_op),
+        .alu_a_sel(alu_a_sel),
+        .alu_b_sel(alu_b_sel),
+
+        .reg_write(reg_write),
+        .illegal_instr(illegal_instr)
     );
 
     logic [4:0] rs1_addr;
@@ -167,14 +206,26 @@ module rv32i_core #(
     assign rd_addr = if_id_q.instr[11:7];
 
     regfile regfile(
-        .*,
+        .clk(clk),
+
+        .rs1_addr(rs1_addr),
+        .rs2_addr(rs2_addr),
+        .rs1_data(rs1_data),
+        .rs2_data(rs2_data),
+
+        .rd_addr(rd_addr),
+        .rd_data(rd_data),
+
         .rd_write(effective_reg_write)
     );
 
     logic branch_taken;
 
     branch_compare branch_compare(
-        .*
+        .rs1_data(id_ex_q.rs1_data),
+        .rs2_data(id_ex_q.rs2_data),
+        .branch_op(id_ex_q.branch_op),
+        .branch_taken(branch_taken)
     );
 
     always_comb begin
@@ -201,7 +252,8 @@ module rv32i_core #(
 
     imm_gen imm_gen(
         .instr(if_id_q.instr),
-        .*
+        .imm_sel(imm_sel),
+        .imm(imm)
     );
 
     logic [31:0] operand_a;
@@ -209,25 +261,28 @@ module rv32i_core #(
     logic [31:0] alu_result;
 
     alu alu(
-        .*
+        .operand_a(operand_a),
+        .operand_b(operand_b),
+        .alu_op(id_ex_q.alu_op),
+        .alu_result(alu_result)
     );
 
     always_comb begin
         operand_a = '0;
         operand_b = '0;
 
-        if (alu_a_sel == ALU_A_RS1) begin
-            operand_a = rs1_data;
+        if (id_ex_q.alu_a_sel == ALU_A_RS1) begin
+            operand_a = id_ex_q.rs1_data;
         end
-        else if (alu_a_sel == ALU_A_PC) begin
-            operand_a = if_id_q.pc;
+        else if (id_ex_q.alu_a_sel == ALU_A_PC) begin
+            operand_a = id_ex_q.pc;
         end
 
-        if (alu_b_sel == ALU_B_RS2) begin
-            operand_b = rs2_data;
+        if (id_ex_q.alu_b_sel == ALU_B_RS2) begin
+            operand_b = id_ex_q.rs2_data;
         end
-        else if (alu_b_sel == ALU_B_IMM) begin
-            operand_b = imm;
+        else if (id_ex_q.alu_b_sel == ALU_B_IMM) begin
+            operand_b = id_ex_q.imm;
         end
     end
 
