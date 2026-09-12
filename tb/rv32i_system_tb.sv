@@ -82,7 +82,7 @@ module rv32i_system_tb;
                 // Store
                 $display(
                     "COMMIT pc=%08x instr=%08x mem_addr=%08x mem_wdata=%08x mem_wstrb=%x",
-                    dut.core.pc,
+                    dut.core.pc_q,
                     imem_rdata,
                     dut.core.dmem_addr,
                     trace_store_data,
@@ -95,7 +95,7 @@ module rv32i_system_tb;
                 // Load
                 $display(
                     "COMMIT pc=%08x instr=%08x rd=%0d rd_data=%08x mem_addr=%08x",
-                    dut.core.pc,
+                    dut.core.pc_q,
                     imem_rdata,
                     dut.core.rd_addr,
                     dut.core.rd_data,
@@ -107,7 +107,7 @@ module rv32i_system_tb;
                 // Normal register write
                 $display(
                     "COMMIT pc=%08x instr=%08x rd=%0d rd_data=%08x",
-                    dut.core.pc,
+                    dut.core.pc_q,
                     imem_rdata,
                     dut.core.rd_addr,
                     dut.core.rd_data
@@ -116,7 +116,7 @@ module rv32i_system_tb;
             else begin
                 $display(
                     "COMMIT pc=%08x instr=%08x",
-                    dut.core.pc,
+                    dut.core.pc_q,
                     imem_rdata
                 );
             end

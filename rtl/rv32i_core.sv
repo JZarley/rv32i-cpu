@@ -78,31 +78,66 @@ module rv32i_core #(
     ex_mem_t ex_mem_q, ex_mem_d;
     mem_wb_t mem_wb_q, mem_wb_d;
 
+    logic [31:0] pc_q, pc_d;
+
     always_ff @(posedge clk) begin
         if (reset) begin
-            if_id_q = '0;
-            id_ex_q = '0;
-            ex_mem_q = '0;
-            mem_wb_q = '0;
+            if_id_q <= '0;
+            id_ex_q <= '0;
+            ex_mem_q <= '0;
+            mem_wb_q <= '0;
         end
         else begin
-            if_id_q = if_id_d;
-            id_ex_q = id_ex_d;
-            ex_mem_q = ex_mem_d;
-            mem_wb_q = mem_wb_d;
+            if_id_q <= if_id_d;
+            id_ex_q <= id_ex_d;
+            ex_mem_q <= ex_mem_d;
+            mem_wb_q <= mem_wb_d;
         end
     end
 
     //temporary
     always_comb begin
-        if_id_d = '0;
-        id_ex_d = '0;
-        ex_mem_d = '0;
-        mem_wb_d = '0;
+        id_ex_d = id_ex_q;
+        ex_mem_d = ex_mem_q;
+        mem_wb_d = mem_wb_q;
     end
 
-    logic [31:0] pc;
-    logic [31:0] next_pc;
+    always_comb begin
+        if_id_d = '0;
+
+        if_id_d.valid = 1'b1;
+        if_id_d.pc = pc_q;
+        if_id_d.instr = imem_rdata;
+    end
+    
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            pc_q <= RESET_PC;
+        end
+        else begin
+            pc_q <= pc_d;
+        end
+    end
+
+    always_comb begin
+        imem_addr = pc_q;
+
+        pc_d = pc_q + 32'd4;
+        unique case (pc_sel)
+                PC_SEQ: ;
+                PC_BRANCH: begin
+                    if (branch_taken) begin
+                        pc_d = if_id_q.pc + imm;
+                    end
+                end
+                PC_JAL: begin
+                    pc_d = if_id_q.pc + imm;
+                end
+                PC_JALR: begin
+                    pc_d = (rs1_data + imm) & 32'hFFFF_FFFE;
+                end
+        endcase
+    end
 
     riscv_pkg::alu_op_t alu_op;
     riscv_pkg::imm_sel_t imm_sel;
@@ -116,7 +151,7 @@ module rv32i_core #(
     logic illegal_instr;
 
     decoder decoder(
-        .instruction(imem_rdata),
+        .instruction(if_id_q.instr),
         .*
     );
 
@@ -127,9 +162,9 @@ module rv32i_core #(
     logic [4:0] rd_addr;
     logic [31:0] rd_data;
 
-    assign rs2_addr = imem_rdata[24:20];
-    assign rs1_addr = imem_rdata[19:15];
-    assign rd_addr = imem_rdata[11:7];
+    assign rs2_addr = if_id_q.instr[24:20];
+    assign rs1_addr = if_id_q.instr[19:15];
+    assign rd_addr = if_id_q.instr[11:7];
 
     regfile regfile(
         .*,
@@ -153,7 +188,7 @@ module rv32i_core #(
                 rd_data = load_data;
             end
             WB_PC4: begin
-                rd_data = pc + 32'd4;
+                rd_data = if_id_q.pc + 32'd4;
             end
             WB_IMM: begin
                 rd_data = imm;
@@ -165,7 +200,7 @@ module rv32i_core #(
     logic [31:0] imm;
 
     imm_gen imm_gen(
-        .instr(imem_rdata),
+        .instr(if_id_q.instr),
         .*
     );
 
@@ -185,7 +220,7 @@ module rv32i_core #(
             operand_a = rs1_data;
         end
         else if (alu_a_sel == ALU_A_PC) begin
-            operand_a = pc;
+            operand_a = if_id_q.pc;
         end
 
         if (alu_b_sel == ALU_B_RS2) begin
@@ -194,35 +229,6 @@ module rv32i_core #(
         else if (alu_b_sel == ALU_B_IMM) begin
             operand_b = imm;
         end
-    end
-    
-    always_ff @(posedge clk) begin
-        if (reset) begin
-            pc <= RESET_PC;
-        end
-        else begin
-            pc <= next_pc;
-        end
-    end
-
-    always_comb begin
-        imem_addr = pc;
-
-        next_pc = pc + 4;
-        unique case (pc_sel)
-                PC_SEQ: ;
-                PC_BRANCH: begin
-                    if (branch_taken) begin
-                        next_pc = pc + imm;
-                    end
-                end
-                PC_JAL: begin
-                    next_pc = pc + imm;
-                end
-                PC_JALR: begin
-                    next_pc = (rs1_data + imm) & 32'hFFFF_FFFE;
-                end
-        endcase
     end
 
     assign dmem_addr = alu_result;
