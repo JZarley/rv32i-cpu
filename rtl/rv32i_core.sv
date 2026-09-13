@@ -173,6 +173,43 @@ module rv32i_core #(
         endcase
     end
 
+    // the values directly below are only for verification purposes
+    logic [31:0] id_ex_instr, ex_mem_pc, ex_mem_instr, mem_wb_pc, mem_wb_instr;
+    logic [31:0] mem_wb_dmem_addr, mem_wb_dmem_wdata;
+    logic [3:0] mem_wb_dmem_wstrb;
+    wb_sel_t mem_wb_wb_sel;
+    mem_op_t mem_wb_d_mem_op;
+
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            id_ex_instr <= '0;
+            ex_mem_pc <= '0;
+            ex_mem_instr <= '0;
+            mem_wb_pc <= '0;
+            mem_wb_instr <= '0;
+
+            mem_wb_wb_sel <= WB_ALU;
+            mem_wb_d_mem_op <= MEM_NONE;
+            mem_wb_dmem_addr <= '0;
+            mem_wb_dmem_wdata <= '0;
+            mem_wb_dmem_wstrb <= '0;
+        end
+
+        else begin
+            id_ex_instr <= if_id_q.instr;
+            ex_mem_pc <= id_ex_q.pc;
+            ex_mem_instr <= id_ex_instr;
+            mem_wb_pc <= ex_mem_pc;
+            mem_wb_instr <= ex_mem_instr;
+
+            mem_wb_wb_sel <= ex_mem_q.wb_sel;
+            mem_wb_d_mem_op <= ex_mem_q.mem_op;
+            mem_wb_dmem_addr <= dmem_addr;
+            mem_wb_dmem_wdata <= dmem_wdata;
+            mem_wb_dmem_wstrb <= dmem_wstrb;
+        end
+    end
+
     always_ff @(posedge clk) begin
         if (reset) begin
             pc_q <= RESET_PC;
