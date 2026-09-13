@@ -116,6 +116,7 @@ module rv32i_core #(
 
         id_ex_d.rs1_data = rs1_data;
         id_ex_d.rs2_data = rs2_data;
+
         id_ex_d.imm = imm;
 
         id_ex_d.alu_op = alu_op;
@@ -131,13 +132,80 @@ module rv32i_core #(
         id_ex_d.reg_write = reg_write;
     end
 
+    logic [31:0] fwd_rs1_data, fwd_rs2_data;
+
+    always_comb begin
+        fwd_rs1_data = id_ex_q.rs1_data;
+        fwd_rs2_data = id_ex_q.rs2_data;
+        
+        if (ex_mem_q.valid &&
+            ex_mem_q.reg_write &&
+            (ex_mem_q.rd == id_ex_q.rs1) &&
+            (ex_mem_q.rd != 5'b0)
+        ) 
+        begin
+            unique case (ex_mem_q.wb_sel)
+                WB_ALU: begin
+                    fwd_rs1_data = ex_mem_q.alu_result;
+                end
+                WB_MEM: begin
+                    ; // requires stall; won't work
+                    // should be handled in the prior cycle separately
+                    //note: could forward load data since it does exist, but combinational path may worsen; test later
+                end
+                WB_PC4: begin
+                    fwd_rs1_data = ex_mem_q.pc_plus_4;
+                end
+                WB_IMM: begin
+                    fwd_rs1_data = ex_mem_q.imm;
+                end
+            endcase
+        end
+        else if (mem_wb_q.valid && 
+            mem_wb_q.reg_write &&
+            (mem_wb_q.rd == id_ex_q.rs1) && 
+            (mem_wb_q.rd != 5'b0))
+        begin
+            fwd_rs1_data = mem_wb_q.wb_value;
+        end
+
+        if (ex_mem_q.valid &&
+            ex_mem_q.reg_write &&
+            (ex_mem_q.rd == id_ex_q.rs2) &&
+            (ex_mem_q.rd != 5'b0)
+        ) 
+        begin
+            unique case (ex_mem_q.wb_sel)
+                WB_ALU: begin
+                    fwd_rs2_data = ex_mem_q.alu_result;
+                end
+                WB_MEM: begin
+                    ;
+                end
+                WB_PC4: begin
+                    fwd_rs2_data = ex_mem_q.pc_plus_4;
+                end
+                WB_IMM: begin
+                    fwd_rs2_data = ex_mem_q.imm;
+                end
+            endcase
+        end
+        else if (mem_wb_q.valid && 
+            mem_wb_q.reg_write &&
+            (mem_wb_q.rd == id_ex_q.rs2) && 
+            (mem_wb_q.rd != 5'b0))
+        begin
+            fwd_rs2_data = mem_wb_q.wb_value;
+        end
+    end
+
     always_comb begin
         ex_mem_d = '0;
 
         ex_mem_d.valid = id_ex_q.valid;
 
         ex_mem_d.alu_result = alu_result;
-        ex_mem_d.store_data = id_ex_q.rs2_data;
+        ex_mem_d.store_data = fwd_rs2_data;
         ex_mem_d.pc_plus_4 = id_ex_q.pc + 32'd4;
         ex_mem_d.imm = id_ex_q.imm;
 
@@ -235,7 +303,7 @@ module rv32i_core #(
                         pc_d = id_ex_q.pc + id_ex_q.imm;
                     end
                     PC_JALR: begin
-                        pc_d = (id_ex_q.rs1_data + id_ex_q.imm) & 32'hFFFF_FFFE;
+                        pc_d = (fwd_rs1_data + id_ex_q.imm) & 32'hFFFF_FFFE;
                     end
             endcase
         end
@@ -295,8 +363,8 @@ module rv32i_core #(
     logic branch_taken;
 
     branch_compare branch_compare(
-        .rs1_data(id_ex_q.rs1_data),
-        .rs2_data(id_ex_q.rs2_data),
+        .rs1_data(fwd_rs1_data),
+        .rs2_data(fwd_rs2_data),
         .branch_op(id_ex_q.branch_op),
         .branch_taken(branch_taken)
     );
@@ -325,14 +393,14 @@ module rv32i_core #(
         operand_b = '0;
 
         if (id_ex_q.alu_a_sel == ALU_A_RS1) begin
-            operand_a = id_ex_q.rs1_data;
+            operand_a = fwd_rs1_data;
         end
         else if (id_ex_q.alu_a_sel == ALU_A_PC) begin
             operand_a = id_ex_q.pc;
         end
 
         if (id_ex_q.alu_b_sel == ALU_B_RS2) begin
-            operand_b = id_ex_q.rs2_data;
+            operand_b = fwd_rs2_data;
         end
         else if (id_ex_q.alu_b_sel == ALU_B_IMM) begin
             operand_b = id_ex_q.imm;
