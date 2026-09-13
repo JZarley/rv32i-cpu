@@ -41,6 +41,9 @@ module rv32i_system_tb;
         imem_rdata = imem[(imem_addr - IMEM_BASE) >> 2];
     end
 
+    int commit_count = 0;
+    int cycle_count = 0;
+
     initial begin
         clk = 1'b0;
         reset = 1'b1;
@@ -48,9 +51,21 @@ module rv32i_system_tb;
         repeat (2) @(posedge clk);
         @(negedge clk);
         reset = 1'b0;
+    end
 
-        repeat (instr_count) @(posedge clk);
-        $finish;
+    always @(posedge clk) begin
+        if (!reset) begin
+            cycle_count++;
+
+            if (dut.core.mem_wb_q.valid)
+                commit_count++;
+
+            if (commit_count == instr_count)
+                $finish;
+
+            if (cycle_count > 1234)
+                $fatal(1, "Simulation timeout");
+        end
     end
 
     logic [31:0] trace_store_data;
@@ -58,67 +73,69 @@ module rv32i_system_tb;
     always_comb begin
         trace_store_data = '0;
 
-        unique case (dut.core.mem_op)
-            MEM_SB: trace_store_data = {24'b0, dut.core.rs2_data[7:0]};
-            MEM_SH: trace_store_data = {16'b0, dut.core.rs2_data[15:0]};
-            MEM_SW: trace_store_data = dut.core.rs2_data;
+        unique case (dut.core.mem_wb_d_mem_op)
+            MEM_SB: trace_store_data = {24'b0, dut.core.id_ex_q.rs2_data[7:0]};
+            MEM_SH: trace_store_data = {16'b0, dut.core.id_ex_q.rs2_data[15:0]};
+            MEM_SW: trace_store_data = dut.core.id_ex_q.rs2_data;
             default: ;
         endcase
     end
     
     always @(posedge clk) begin
         if (!reset) begin
-            if (dut.core.rs1_addr == 5'd0) begin
-                assert (dut.core.rs1_data == 32'd0)
+            if (dut.core.id_ex_q.rs1 == 5'd0) begin
+                assert (dut.core.id_ex_q.rs1_data == 32'd0)
                     else $fatal(1, "x0 returned nonzero data on rs1 port");
             end
 
-            if (dut.core.rs2_addr == 5'd0) begin
-                assert (dut.core.rs2_data == 32'd0)
+            if (dut.core.id_ex_q.rs2 == 5'd0) begin
+                assert (dut.core.id_ex_q.rs2_data == 32'd0)
                     else $fatal(1, "x0 returned nonzero data on rs2 port");
             end
-            
-            if (dut.core.dmem_wstrb != 4'b0000) begin
-                // Store
-                $display(
-                    "COMMIT pc=%08x instr=%08x mem_addr=%08x mem_wdata=%08x mem_wstrb=%x",
-                    dut.core.pc_q,
-                    imem_rdata,
-                    dut.core.dmem_addr,
-                    trace_store_data,
-                    dut.core.dmem_wstrb
-                );
-            end
-            else if (dut.core.wb_sel == WB_MEM &&
-                    dut.core.reg_write &&
-                    dut.core.rd_addr != 5'd0) begin
-                // Load
-                $display(
-                    "COMMIT pc=%08x instr=%08x rd=%0d rd_data=%08x mem_addr=%08x",
-                    dut.core.pc_q,
-                    imem_rdata,
-                    dut.core.rd_addr,
-                    dut.core.mem_wb_q.wb_value,
-                    dut.core.dmem_addr
-                );
-            end
-            else if (dut.core.reg_write &&
-                    dut.core.rd_addr != 5'd0) begin
-                // Normal register write
-                $display(
-                    "COMMIT pc=%08x instr=%08x rd=%0d rd_data=%08x",
-                    dut.core.pc_q,
-                    imem_rdata,
-                    dut.core.rd_addr,
-                    dut.core.mem_wb_q.wb_value
-                );
-            end
-            else begin
-                $display(
-                    "COMMIT pc=%08x instr=%08x",
-                    dut.core.pc_q,
-                    imem_rdata
-                );
+
+            if (dut.core.mem_wb_q.valid) begin
+                if (dut.core.mem_wb_dmem_wstrb != 4'b0000) begin
+                    // Store
+                    $display(
+                        "COMMIT pc=%08x instr=%08x mem_addr=%08x mem_wdata=%08x mem_wstrb=%x",
+                        dut.core.mem_wb_pc,
+                        dut.core.mem_wb_instr,
+                        dut.core.mem_wb_dmem_addr,
+                        dut.core.mem_wb_dmem_wdata,
+                        dut.core.mem_wb_dmem_wstrb
+                    );
+                end
+                else if (dut.core.mem_wb_wb_sel == WB_MEM &&
+                        dut.core.mem_wb_q.reg_write &&
+                        dut.core.mem_wb_q.rd != 5'd0) begin
+                    // Load
+                    $display(
+                        "COMMIT pc=%08x instr=%08x rd=%0d rd_data=%08x mem_addr=%08x",
+                        dut.core.mem_wb_pc,
+                        dut.core.mem_wb_instr,
+                        dut.core.mem_wb_q.rd,
+                        dut.core.mem_wb_q.wb_value,
+                        dut.core.mem_wb_dmem_addr,
+                    );
+                end
+                else if (dut.core.mem_wb_q.reg_write &&
+                        dut.core.mem_wb_q.rd != 5'd0) begin
+                    // Normal register write
+                    $display(
+                        "COMMIT pc=%08x instr=%08x rd=%0d rd_data=%08x",
+                        dut.core.mem_wb_pc,
+                        dut.core.mem_wb_instr,
+                        dut.core.mem_wb_q.rd,
+                        dut.core.mem_wb_q.wb_value
+                    );
+                end
+                else begin
+                    $display(
+                        "COMMIT pc=%08x instr=%08x",
+                        dut.core.mem_wb_pc,
+                        dut.core.mem_wb_instr
+                    );
+                end
             end
         end
     end
