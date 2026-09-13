@@ -55,6 +55,7 @@ module rv32i_core #(
         logic [31:0] alu_result;
         logic [31:0] store_data;
         logic [31:0] pc_plus_4;
+        logic [31:0] imm; //note: could have made alu result hold imm instead when applicable, but to keep the design consistent (for timing comparison later) this will be used for the time being
 
         logic [4:0] rd;
 
@@ -97,7 +98,6 @@ module rv32i_core #(
 
     //temporary
     always_comb begin
-        ex_mem_d = ex_mem_q;
         mem_wb_d = mem_wb_q;
     end
 
@@ -112,7 +112,7 @@ module rv32i_core #(
     always_comb begin
         id_ex_d = '0;
 
-        id_ex_d.valid = if_id_q.valid;
+        id_ex_d.valid = if_id_q.valid && !illegal_instr; //note: turns illegal instructions into bubbles; will likely change for implementation of exceptions/traps eventually
         id_ex_d.pc = if_id_q.pc;
 
         id_ex_d.rs1 = rs1_addr;
@@ -134,6 +134,24 @@ module rv32i_core #(
         id_ex_d.wb_sel = wb_sel;
 
         id_ex_d.reg_write = reg_write;
+    end
+
+    always_comb begin
+        ex_mem_d = '0;
+
+        ex_mem_d.valid = id_ex_q.valid;
+
+        ex_mem_d.alu_result = alu_result;
+        ex_mem_d.store_data = id_ex_q.rs2_data;
+        ex_mem_d.pc_plus_4 = id_ex_q.pc + 32'd4;
+        ex_mem_d.imm = id_ex_q.imm;
+
+        ex_mem_d.rd = id_ex_q.rd;
+
+        ex_mem_d.mem_op = id_ex_q.mem_op;
+        ex_mem_d.wb_sel = id_ex_q.wb_sel;
+
+        ex_mem_d.reg_write = id_ex_q.reg_write;
     end
     
     always_ff @(posedge clk) begin
@@ -233,13 +251,14 @@ module rv32i_core #(
 
         unique case (wb_sel)
             WB_ALU: begin
-                rd_data = alu_result;
+                rd_data = alu_result; //
             end
             WB_MEM: begin
                 rd_data = load_data;
             end
             WB_PC4: begin
                 rd_data = if_id_q.pc + 32'd4;
+                //here?
             end
             WB_IMM: begin
                 rd_data = imm;
@@ -286,14 +305,14 @@ module rv32i_core #(
         end
     end
 
-    assign dmem_addr = alu_result;
+    assign dmem_addr = ex_mem_q.alu_result;
     logic mem_misaligned;
     logic effective_reg_write;
 
     always_comb begin
         mem_misaligned = 1'b0;
 
-        unique case (mem_op)
+        unique case (ex_mem_q.mem_op)
             MEM_LH,
             MEM_LHU,
             MEM_SH: begin
@@ -309,23 +328,24 @@ module rv32i_core #(
         endcase
     end
 
+    // below needs to be fixed in next stage; misaligned combines with exmem regwrite to make memwb regwrite
     assign effective_reg_write = reg_write && !mem_misaligned;
 
     always_comb begin
         dmem_wdata = '0;
         dmem_wstrb = '0;
-        if (!mem_misaligned && !illegal_instr) begin
-            unique case (mem_op)
+        if (ex_mem_q.valid && !mem_misaligned) begin
+            unique case (ex_mem_q.mem_op)
                 MEM_SB: begin
-                    dmem_wdata = {24'b0, rs2_data[7:0]} << (8 * dmem_addr[1:0]);
+                    dmem_wdata = {24'b0, ex_mem_q.store_data[7:0]} << (8 * dmem_addr[1:0]);
                     dmem_wstrb = 4'b0001 << dmem_addr[1:0];
                 end
                 MEM_SH: begin
-                    dmem_wdata = {16'b0, rs2_data[15:0]} << (8 * dmem_addr[1:0]);
+                    dmem_wdata = {16'b0, ex_mem_q.store_data[15:0]} << (8 * dmem_addr[1:0]);
                     dmem_wstrb = 4'b0011 << dmem_addr[1:0];
                 end
                 MEM_SW: begin
-                    dmem_wdata = rs2_data;
+                    dmem_wdata = ex_mem_q.store_data;
                     dmem_wstrb = 4'b1111;
                 end
                 default: ;
@@ -356,7 +376,7 @@ module rv32i_core #(
     always_comb begin
         load_data = '0;
 
-        unique case (mem_op)
+        unique case (ex_mem_q.mem_op)
             MEM_LB: begin
                 load_data = {{24{load_byte[7]}}, load_byte};
             end
