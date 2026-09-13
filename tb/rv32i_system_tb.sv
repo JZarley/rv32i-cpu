@@ -98,7 +98,7 @@ module rv32i_system_tb;
                     dut.core.pc_q,
                     imem_rdata,
                     dut.core.rd_addr,
-                    dut.core.rd_data,
+                    dut.core.mem_wb_q.wb_value,
                     dut.core.dmem_addr
                 );
             end
@@ -110,7 +110,7 @@ module rv32i_system_tb;
                     dut.core.pc_q,
                     imem_rdata,
                     dut.core.rd_addr,
-                    dut.core.rd_data
+                    dut.core.mem_wb_q.wb_value
                 );
             end
             else begin

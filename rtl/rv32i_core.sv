@@ -96,11 +96,6 @@ module rv32i_core #(
         end
     end
 
-    //temporary
-    always_comb begin
-        mem_wb_d = mem_wb_q;
-    end
-
     always_comb begin
         if_id_d = '0;
 
@@ -153,7 +148,31 @@ module rv32i_core #(
 
         ex_mem_d.reg_write = id_ex_q.reg_write;
     end
-    
+
+    always_comb begin
+        mem_wb_d = '0;
+
+        mem_wb_d.valid = ex_mem_q.valid;
+
+        mem_wb_d.rd = ex_mem_q.rd;
+        mem_wb_d.reg_write = ex_mem_q.reg_write && !mem_misaligned; // still doesn't implement full RV32I behavior
+
+        unique case (ex_mem_q.wb_sel)
+            WB_ALU: begin
+                mem_wb_d.wb_value = ex_mem_q.alu_result;
+            end
+            WB_MEM: begin
+                mem_wb_d.wb_value = load_data;
+            end
+            WB_PC4: begin
+                mem_wb_d.wb_value = ex_mem_q.pc_plus_4;
+            end
+            WB_IMM: begin
+                mem_wb_d.wb_value = ex_mem_q.imm;
+            end
+        endcase
+    end
+
     always_ff @(posedge clk) begin
         if (reset) begin
             pc_q <= RESET_PC;
@@ -217,7 +236,6 @@ module rv32i_core #(
     logic [4:0] rs2_addr;
     logic [31:0] rs2_data;
     logic [4:0] rd_addr;
-    logic [31:0] rd_data;
 
     assign rs2_addr = if_id_q.instr[24:20];
     assign rs1_addr = if_id_q.instr[19:15];
@@ -231,10 +249,10 @@ module rv32i_core #(
         .rs1_data(rs1_data),
         .rs2_data(rs2_data),
 
-        .rd_addr(rd_addr),
-        .rd_data(rd_data),
+        .rd_addr(mem_wb_q.rd),
+        .rd_data(mem_wb_q.wb_value),
 
-        .rd_write(effective_reg_write)
+        .rd_write(mem_wb_q.valid && mem_wb_q.reg_write && (mem_wb_q.rd != 5'd0)) // technically not needed (5'd0 check) since we don't actually read from or write to x0 anyways
     );
 
     logic branch_taken;
@@ -245,27 +263,6 @@ module rv32i_core #(
         .branch_op(id_ex_q.branch_op),
         .branch_taken(branch_taken)
     );
-
-    always_comb begin
-        rd_data = '0;
-
-        unique case (wb_sel)
-            WB_ALU: begin
-                rd_data = alu_result; //
-            end
-            WB_MEM: begin
-                rd_data = load_data;
-            end
-            WB_PC4: begin
-                rd_data = if_id_q.pc + 32'd4;
-                //here?
-            end
-            WB_IMM: begin
-                rd_data = imm;
-            end
-            default: ;
-        endcase
-    end
 
     logic [31:0] imm;
 
@@ -307,7 +304,6 @@ module rv32i_core #(
 
     assign dmem_addr = ex_mem_q.alu_result;
     logic mem_misaligned;
-    logic effective_reg_write;
 
     always_comb begin
         mem_misaligned = 1'b0;
@@ -327,9 +323,6 @@ module rv32i_core #(
             default: ;
         endcase
     end
-
-    // below needs to be fixed in next stage; misaligned combines with exmem regwrite to make memwb regwrite
-    assign effective_reg_write = reg_write && !mem_misaligned;
 
     always_comb begin
         dmem_wdata = '0;
