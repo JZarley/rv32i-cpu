@@ -3,6 +3,7 @@ set -euo pipefail
 
 TESTS=(
     "hazard_free 16"
+    "forwarding 13"
     "smoke 4"
     "memory_smoke 6"
     "alu_reg 15"

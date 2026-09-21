@@ -149,9 +149,9 @@ module rv32i_core #(
                     fwd_rs1_data = ex_mem_q.alu_result;
                 end
                 WB_MEM: begin
-                    ; // requires stall; won't work
-                    // should be handled in the prior cycle separately
+                    fwd_rs1_data = load_data;
                     //note: could forward load data since it does exist, but combinational path may worsen; test later
+                    //this code will forward load data (to be used for later timing comparison); following commits will implement stalls
                 end
                 WB_PC4: begin
                     fwd_rs1_data = ex_mem_q.pc_plus_4;
@@ -181,6 +181,7 @@ module rv32i_core #(
                 end
                 WB_MEM: begin
                     ;
+                    fwd_rs2_data = load_data;
                 end
                 WB_PC4: begin
                     fwd_rs2_data = ex_mem_q.pc_plus_4;
