@@ -103,6 +103,26 @@ module rv32i_core #(
         if_id_d.pc = pc_q;
         if_id_d.instr = imem_rdata;
     end
+    
+    logic [31:0] id_rs1_data, id_rs2_data;
+
+    always_comb begin
+        id_rs1_data = rs1_data;
+        id_rs2_data = rs2_data;
+
+        if (mem_wb_q.valid &&
+            mem_wb_q.reg_write &&
+            mem_wb_q.rd != 5'b0) begin
+
+            if (mem_wb_q.rd == rs1_addr) begin
+                id_rs1_data = mem_wb_q.wb_value;
+            end
+
+            if (mem_wb_q.rd == rs2_addr) begin
+                id_rs2_data = mem_wb_q.wb_value;
+            end
+        end
+    end
 
     always_comb begin
         id_ex_d = '0;
@@ -114,8 +134,8 @@ module rv32i_core #(
         id_ex_d.rs2 = rs2_addr;
         id_ex_d.rd = rd_addr;
 
-        id_ex_d.rs1_data = rs1_data;
-        id_ex_d.rs2_data = rs2_data;
+        id_ex_d.rs1_data = id_rs1_data;
+        id_ex_d.rs2_data = id_rs2_data;
 
         id_ex_d.imm = imm;
 
