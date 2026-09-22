@@ -102,6 +102,10 @@ module rv32i_core #(
         if_id_d.valid = 1'b1;
         if_id_d.pc = pc_q;
         if_id_d.instr = imem_rdata;
+
+        if (redirect) begin
+            if_id_d.valid = 1'b0;
+        end
     end
     
     logic [31:0] id_rs1_data, id_rs2_data;
@@ -150,6 +154,10 @@ module rv32i_core #(
         id_ex_d.wb_sel = wb_sel;
 
         id_ex_d.reg_write = reg_write;
+
+        if (redirect) begin
+            id_ex_d.valid = 1'b0;
+        end
     end
 
     logic [31:0] fwd_rs1_data, fwd_rs2_data;
@@ -308,23 +316,39 @@ module rv32i_core #(
         end
     end
 
+    logic redirect;
+    logic [31:0] redirect_target;
+
     always_comb begin
         imem_addr = pc_q;
 
         pc_d = pc_q + 32'd4;
+
+        if (redirect) begin
+            pc_d = redirect_target;
+        end
+    end
+
+    always_comb begin
+        redirect = 1'b0;
+        redirect_target = '0;
+
         if (id_ex_q.valid) begin
             unique case (id_ex_q.pc_sel)
                     PC_SEQ: ;
                     PC_BRANCH: begin
                         if (branch_taken) begin
-                            pc_d = id_ex_q.pc + id_ex_q.imm;
+                            redirect = 1'b1;
+                            redirect_target = id_ex_q.pc + id_ex_q.imm;
                         end
                     end
                     PC_JAL: begin
-                        pc_d = id_ex_q.pc + id_ex_q.imm;
+                        redirect = 1'b1;
+                        redirect_target = id_ex_q.pc + id_ex_q.imm;
                     end
                     PC_JALR: begin
-                        pc_d = (fwd_rs1_data + id_ex_q.imm) & 32'hFFFF_FFFE;
+                        redirect = 1'b1;
+                        redirect_target = (fwd_rs1_data + id_ex_q.imm) & 32'hFFFF_FFFE;
                     end
             endcase
         end
