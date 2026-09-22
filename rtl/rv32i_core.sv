@@ -272,10 +272,19 @@ module rv32i_core #(
 
     // the values directly below are only for verification purposes
     logic [31:0] id_ex_instr, ex_mem_pc, ex_mem_instr, mem_wb_pc, mem_wb_instr;
-    logic [31:0] mem_wb_dmem_addr, mem_wb_dmem_wdata;
-    logic [3:0] mem_wb_dmem_wstrb;
-    wb_sel_t mem_wb_wb_sel;
-    mem_op_t mem_wb_d_mem_op;
+    logic [31:0] mem_wb_dmem_addr, mem_wb_store_data;
+    logic [31:0] trace_store_data;
+
+    always_comb begin
+        trace_store_data = '0;
+
+        unique case (ex_mem_q.mem_op)
+            MEM_SB: trace_store_data = {24'b0, ex_mem_q.store_data[7:0]};
+            MEM_SH: trace_store_data = {16'b0, ex_mem_q.store_data[15:0]};
+            MEM_SW: trace_store_data = ex_mem_q.store_data;
+            default: ;
+        endcase
+    end
 
     always_ff @(posedge clk) begin
         if (reset) begin
@@ -285,11 +294,8 @@ module rv32i_core #(
             mem_wb_pc <= '0;
             mem_wb_instr <= '0;
 
-            mem_wb_wb_sel <= WB_ALU;
-            mem_wb_d_mem_op <= MEM_NONE;
             mem_wb_dmem_addr <= '0;
-            mem_wb_dmem_wdata <= '0;
-            mem_wb_dmem_wstrb <= '0;
+            mem_wb_store_data <= '0;
         end
 
         else begin
@@ -299,11 +305,8 @@ module rv32i_core #(
             mem_wb_pc <= ex_mem_pc;
             mem_wb_instr <= ex_mem_instr;
 
-            mem_wb_wb_sel <= ex_mem_q.wb_sel;
-            mem_wb_d_mem_op <= ex_mem_q.mem_op;
             mem_wb_dmem_addr <= dmem_addr;
-            mem_wb_dmem_wdata <= dmem_wdata;
-            mem_wb_dmem_wstrb <= dmem_wstrb;
+            mem_wb_store_data <= trace_store_data;
         end
     end
 

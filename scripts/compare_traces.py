@@ -34,8 +34,8 @@ RTL_RD_RE = re.compile(
 
 RTL_MEM_RE = re.compile(
     r"\bmem_addr=([0-9a-fA-F]+)"
-    r"(?:\s+mem_wdata=([0-9a-fA-F]+)"
-    r"\s+mem_wstrb=([0-9a-fA-F]+))?"
+    r"(?:\s+mem_wdata=([0-9a-fA-F]+))?"
+    # r"\s+mem_wstrb=([0-9a-fA-F]+))?"
 )
 
 

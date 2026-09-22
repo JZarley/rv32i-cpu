@@ -81,18 +81,17 @@ module rv32i_system_tb;
             end
 
             if (dut.core.mem_wb_q.valid) begin
-                if (dut.core.mem_wb_dmem_wstrb != 4'b0000) begin
+                if (dut.core.mem_wb_instr[6:0] == 7'b0100011) begin
                     // Store
                     $display(
-                        "COMMIT pc=%08x instr=%08x mem_addr=%08x mem_wdata=%08x mem_wstrb=%x",
+                        "COMMIT pc=%08x instr=%08x mem_addr=%08x mem_wdata=%08x",
                         dut.core.mem_wb_pc,
                         dut.core.mem_wb_instr,
                         dut.core.mem_wb_dmem_addr,
-                        dut.core.mem_wb_dmem_wdata,
-                        dut.core.mem_wb_dmem_wstrb
+                        dut.core.mem_wb_store_data
                     );
                 end
-                else if (dut.core.mem_wb_wb_sel == WB_MEM &&
+                else if (dut.core.mem_wb_instr[6:0] == 7'b0000011 &&
                         dut.core.mem_wb_q.reg_write &&
                         dut.core.mem_wb_q.rd != 5'd0) begin
                     // Load
@@ -102,7 +101,7 @@ module rv32i_system_tb;
                         dut.core.mem_wb_instr,
                         dut.core.mem_wb_q.rd,
                         dut.core.mem_wb_q.wb_value,
-                        dut.core.mem_wb_dmem_addr,
+                        dut.core.mem_wb_dmem_addr
                     );
                 end
                 else if (dut.core.mem_wb_q.reg_write &&
