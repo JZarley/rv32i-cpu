@@ -7,6 +7,7 @@ TESTS=(
     "smoke 4"
     "memory_smoke 6"
     "load_use_hazards 30"
+    "insertion_sort 246 --check-sort"
     "alu_reg 15"
     "alu_imm 12"
     "upper_imm 4"

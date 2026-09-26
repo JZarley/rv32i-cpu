@@ -16,6 +16,8 @@ module rv32i_system_tb;
     string program_hex;
     int instr_count;
 
+    logic check_sort;
+
     rv32i_system dut (
         .clk(clk),
         .reset(reset),
@@ -35,6 +37,8 @@ module rv32i_system_tb;
         end
 
         $readmemh(program_hex, imem);
+
+        check_sort = $test$plusargs("CHECK_SORT");
     end
 
     always_comb begin
@@ -60,8 +64,12 @@ module rv32i_system_tb;
             if (dut.core.mem_wb_q.valid)
                 commit_count++;
 
-            if (commit_count == instr_count)
+            if (commit_count == instr_count) begin
+                if (check_sort)
+                    check_insertion_sort();
+
                 $finish;
+            end
 
             if (cycle_count > 1234)
                 $fatal(1, "Simulation timeout");
@@ -125,4 +133,39 @@ module rv32i_system_tb;
             end
         end
     end
+
+    
+    task check_insertion_sort;
+        logic [31:0] expected [0:7];
+        logic [31:0] actual;
+
+        expected[0] = 32'd1;
+        expected[1] = 32'd2;
+        expected[2] = 32'd3;
+        expected[3] = 32'd4;
+        expected[4] = 32'd5;
+        expected[5] = 32'd7;
+        expected[6] = 32'd8;
+        expected[7] = 32'd9;
+
+        for (int i = 0; i < 8; i++) begin
+            actual = {
+                dut.dmem.mem[256 + 4*i + 3],
+                dut.dmem.mem[256 + 4*i + 2],
+                dut.dmem.mem[256 + 4*i + 1],
+                dut.dmem.mem[256 + 4*i]
+            };
+
+            assert (actual == expected[i])
+                else $fatal(
+                    1,
+                    "Insertion sort failed at index %0d: expected %0d, got %0d",
+                    i,
+                    expected[i],
+                    actual
+                );
+        end
+
+        $display("PASS: insertion sort memory contents verified");
+    endtask
 endmodule

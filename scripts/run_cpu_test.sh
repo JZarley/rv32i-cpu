@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
-    echo "Usage: $0 PROGRAM INSTRUCTION_COUNT [--no-synth]"
+if [ "$#" -lt 2 ] || [ "$#" -gt 4 ]; then
+    echo "Usage: $0 PROGRAM INSTRUCTION_COUNT [--no-synth] [--check-sort]"
     exit 1
 fi
 
@@ -10,13 +10,22 @@ PROGRAM="$1"
 INSTR_COUNT="$2"
 
 FLOW_ARGS=()
+SIM_ARGS=()
 
-if [ "${3:-}" = "--no-synth" ]; then
-    FLOW_ARGS+=(--no-synth)
-elif [ "$#" -eq 3 ]; then
-    echo "Unknown option: $3"
-    exit 1
-fi
+for arg in "${@:3}"; do
+    case "$arg" in
+        --no-synth)
+            FLOW_ARGS+=(--no-synth)
+            ;;
+        --check-sort)
+            SIM_ARGS+=(+CHECK_SORT)
+            ;;
+        *)
+            echo "Unknown option: $arg"
+            exit 1
+            ;;
+    esac
+done
 
 ASM="programs/${PROGRAM}.S"
 OBJ="programs/${PROGRAM}.o"
@@ -79,7 +88,7 @@ spike \
 
 echo "[6/7] Running RTL"
 
-./scripts/run_flow.sh rv32i_system 1 "${FLOW_ARGS[@]}" "+PROGRAM_HEX=$HEX" "+INSTR_COUNT=$INSTR_COUNT"
+./scripts/run_flow.sh rv32i_system 1 "${FLOW_ARGS[@]}" "+PROGRAM_HEX=$HEX" "+INSTR_COUNT=$INSTR_COUNT" "${SIM_ARGS[@]}"
 
 echo "[7/7] Comparing architectural traces"
 
