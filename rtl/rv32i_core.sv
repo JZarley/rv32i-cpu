@@ -192,8 +192,7 @@ module rv32i_core #(
                     fwd_rs1_data = ex_mem_q.alu_result;
                 end
                 WB_MEM: begin
-                    //note: could forward load data since it does exist, but combinational path may worsen; test later
-                    //this code will forward load data (to be used for later timing comparison); following commits will implement stalls
+                    // load-use dependencies handled by stalling
                 end
                 WB_PC4: begin
                     fwd_rs1_data = ex_mem_q.pc_plus_4;

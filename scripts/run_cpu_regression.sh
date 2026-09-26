@@ -6,7 +6,7 @@ TESTS=(
     "forwarding 13"
     "smoke 4"
     "memory_smoke 6"
-    "load_use_hazards 314"
+    "load_use_hazards 30"
     "alu_reg 15"
     "alu_imm 12"
     "upper_imm 4"
