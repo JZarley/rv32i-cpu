@@ -58,6 +58,7 @@ module rv32i_core #(
         logic [31:0] imm; //note: could have made alu result hold imm instead when applicable, but to keep the design consistent (for timing comparison later) this will be used for the time being
 
         logic [4:0] rd;
+        logic [4:0] rs2;
 
         mem_op_t mem_op;
         wb_sel_t wb_sel;
@@ -134,9 +135,7 @@ module rv32i_core #(
     logic id_uses_rs1, id_uses_rs2, load_use_stall;
 
     assign id_uses_rs1 = (alu_a_sel == ALU_A_RS1) && if_id_q.valid;
-    assign id_uses_rs2 = ((alu_b_sel == ALU_B_RS2) ||
-                         (mem_op[3] && !(&mem_op[2:0])) // this checks for stores. mem_none is 1111, and all stores start with 1 in the msb.
-                         ) && if_id_q.valid;
+    assign id_uses_rs2 = (alu_b_sel == ALU_B_RS2) && if_id_q.valid;
     
     assign load_use_stall = (id_ex_q.mem_op[3] == 1'b0) && 
                             id_ex_q.valid &&
@@ -242,6 +241,20 @@ module rv32i_core #(
         end
     end
 
+    logic [31:0] mem_store_data;
+
+    always_comb begin
+        mem_store_data = ex_mem_q.store_data;
+
+        if (mem_wb_q.valid &&
+            mem_wb_q.reg_write &&
+            mem_wb_q.rd != 5'd0 &&
+            mem_wb_q.rd == ex_mem_q.rs2
+            ) begin
+            mem_store_data = mem_wb_q.wb_value;
+        end
+    end
+
     always_comb begin
         ex_mem_d = '0;
 
@@ -253,6 +266,7 @@ module rv32i_core #(
         ex_mem_d.imm = id_ex_q.imm;
 
         ex_mem_d.rd = id_ex_q.rd;
+        ex_mem_d.rs2 = id_ex_q.rs2;
 
         ex_mem_d.mem_op = id_ex_q.mem_op;
         ex_mem_d.wb_sel = id_ex_q.wb_sel;
@@ -293,9 +307,9 @@ module rv32i_core #(
         trace_store_data = '0;
 
         unique case (ex_mem_q.mem_op)
-            MEM_SB: trace_store_data = {24'b0, ex_mem_q.store_data[7:0]};
-            MEM_SH: trace_store_data = {16'b0, ex_mem_q.store_data[15:0]};
-            MEM_SW: trace_store_data = ex_mem_q.store_data;
+            MEM_SB: trace_store_data = {24'b0, mem_store_data[7:0]};
+            MEM_SH: trace_store_data = {16'b0, mem_store_data[15:0]};
+            MEM_SW: trace_store_data = mem_store_data;
             default: ;
         endcase
     end
@@ -500,15 +514,15 @@ module rv32i_core #(
         if (ex_mem_q.valid && !mem_misaligned) begin
             unique case (ex_mem_q.mem_op)
                 MEM_SB: begin
-                    dmem_wdata = {24'b0, ex_mem_q.store_data[7:0]} << (8 * dmem_addr[1:0]);
+                    dmem_wdata = {24'b0, mem_store_data[7:0]} << (8 * dmem_addr[1:0]);
                     dmem_wstrb = 4'b0001 << dmem_addr[1:0];
                 end
                 MEM_SH: begin
-                    dmem_wdata = {16'b0, ex_mem_q.store_data[15:0]} << (8 * dmem_addr[1:0]);
+                    dmem_wdata = {16'b0, mem_store_data[15:0]} << (8 * dmem_addr[1:0]);
                     dmem_wstrb = 4'b0011 << dmem_addr[1:0];
                 end
                 MEM_SW: begin
-                    dmem_wdata = ex_mem_q.store_data;
+                    dmem_wdata = mem_store_data;
                     dmem_wstrb = 4'b1111;
                 end
                 default: ;
