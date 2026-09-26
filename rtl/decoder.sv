@@ -288,8 +288,8 @@ module decoder (
                 mem_op          = MEM_NONE;
                 pc_sel          = PC_SEQ;
                 branch_op       = BR_NONE;
-                alu_a_sel       = ALU_A_RS1; // don't care
-                alu_b_sel       = ALU_B_RS2; // DC
+                alu_a_sel       = ALU_A_PC; // don't care
+                alu_b_sel       = ALU_B_IMM; // DC
                 reg_write       = 1'b1;
                 illegal_instr   = 1'b0;
             end
@@ -361,7 +361,7 @@ module decoder (
                 mem_op          = MEM_NONE;
                 pc_sel          = PC_JAL;
                 branch_op       = BR_NONE;
-                alu_a_sel       = ALU_A_RS1;
+                alu_a_sel       = ALU_A_PC;
                 alu_b_sel       = ALU_B_IMM; // likely don't care
                 reg_write       = 1'b1;
                 illegal_instr   = 1'b0;

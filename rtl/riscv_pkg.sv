@@ -31,15 +31,15 @@ package riscv_pkg;
     } wb_sel_t;
 
     typedef enum logic [3:0] {
-        MEM_NONE,
-        MEM_LB,
-        MEM_LBU,
-        MEM_LH,
-        MEM_LHU,
-        MEM_LW,
-        MEM_SB,
-        MEM_SH,
-        MEM_SW
+        MEM_NONE = 4'b1111,
+        MEM_LB = 4'b0000,
+        MEM_LBU = 4'b0001,
+        MEM_LH = 4'b0010,
+        MEM_LHU = 4'b0011,
+        MEM_LW = 4'b0100,
+        MEM_SB = 4'b1000,
+        MEM_SH = 4'b1010,
+        MEM_SW = 4'b1100
     } mem_op_t;
     
     typedef enum logic [1:0] {

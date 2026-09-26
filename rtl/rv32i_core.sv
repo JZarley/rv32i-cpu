@@ -106,6 +106,9 @@ module rv32i_core #(
         if (redirect) begin
             if_id_d.valid = 1'b0;
         end
+        else if (load_use_stall) begin
+            if_id_d = if_id_q;
+        end
     end
     
     logic [31:0] id_rs1_data, id_rs2_data;
@@ -128,6 +131,19 @@ module rv32i_core #(
         end
     end
 
+    logic id_uses_rs1, id_uses_rs2, load_use_stall;
+
+    assign id_uses_rs1 = (alu_a_sel == ALU_A_RS1) && if_id_q.valid;
+    assign id_uses_rs2 = ((alu_b_sel == ALU_B_RS2) ||
+                         (mem_op[3] && !(&mem_op[2:0])) // this checks for stores. mem_none is 1111, and all stores start with 1 in the msb.
+                         ) && if_id_q.valid;
+    
+    assign load_use_stall = (id_ex_q.mem_op[3] == 1'b0) && 
+                            id_ex_q.valid &&
+                            (id_ex_q.rd != 5'd0) &&
+                            ((id_uses_rs1 && (id_ex_q.rd == rs1_addr)) ||
+                            (id_uses_rs2 && (id_ex_q.rd == rs2_addr)));
+    
     always_comb begin
         id_ex_d = '0;
 
@@ -155,7 +171,7 @@ module rv32i_core #(
 
         id_ex_d.reg_write = reg_write;
 
-        if (redirect) begin
+        if (redirect || load_use_stall) begin
             id_ex_d.valid = 1'b0;
         end
     end
@@ -177,7 +193,6 @@ module rv32i_core #(
                     fwd_rs1_data = ex_mem_q.alu_result;
                 end
                 WB_MEM: begin
-                    fwd_rs1_data = load_data;
                     //note: could forward load data since it does exist, but combinational path may worsen; test later
                     //this code will forward load data (to be used for later timing comparison); following commits will implement stalls
                 end
@@ -209,7 +224,6 @@ module rv32i_core #(
                 end
                 WB_MEM: begin
                     ;
-                    fwd_rs2_data = load_data;
                 end
                 WB_PC4: begin
                     fwd_rs2_data = ex_mem_q.pc_plus_4;
@@ -326,9 +340,12 @@ module rv32i_core #(
         imem_addr = pc_q;
 
         pc_d = pc_q + 32'd4;
-
+        
         if (redirect) begin
             pc_d = redirect_target;
+        end
+        else if (load_use_stall) begin
+            pc_d = pc_q;
         end
     end
 
