@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-LIBERTY="${LIBERTY:-$HOME/STA-Foundations/lib/NangateOpenCellLibrary_typical.lib}"
+LIBERTY="${LIBERTY:-$ROOT/lib/NangateOpenCellLibrary_typical.lib}"
 if [[ ! -f "$LIBERTY" ]]; then
     echo "Liberty library not found: $LIBERTY" >&2
     exit 1
