@@ -13,9 +13,15 @@ module rv32i_system (
     logic [31:0] dmem_wdata;
     logic [31:0] dmem_rdata;
 
-    rv32i_core core (
-        .*
-    );
+    `ifdef MEMEX_VARIANT
+        rv32i_core_memex core (
+            .*
+        );
+    `else
+        rv32i_core core (
+            .*
+        );
+    `endif
 
     data_memory dmem (
         .*

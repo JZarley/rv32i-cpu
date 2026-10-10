@@ -65,6 +65,8 @@ module rv32i_system_tb;
                 commit_count++;
 
             if (commit_count == instr_count) begin
+                $display("RESULT cycles=%0d commits=%0d", cycle_count, commit_count);
+
                 if (check_sort)
                     check_insertion_sort();
 
