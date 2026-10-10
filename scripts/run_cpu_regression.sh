@@ -18,7 +18,10 @@ TESTS=(
 )
 
 for ((i = 0; i < ${#TESTS[@]}; i++)); do
-    read -r program instr_count <<< "${TESTS[$i]}"
+    read -r -a parts <<< "${TESTS[$i]}"
+    program="${parts[0]}"
+    instr_count="${parts[1]}"
+    extra_args=("${parts[@]:2}")
 
     echo
     echo "========================================"
@@ -26,9 +29,9 @@ for ((i = 0; i < ${#TESTS[@]}; i++)); do
     echo "========================================"
 
     if [ "$i" -eq $((${#TESTS[@]} - 1)) ]; then
-        ./scripts/run_cpu_test.sh "$program" "$instr_count"
+        ./scripts/run_cpu_test.sh "$program" "$instr_count" "${extra_args[@]}"
     else
-        ./scripts/run_cpu_test.sh "$program" "$instr_count" --no-synth
+        ./scripts/run_cpu_test.sh "$program" "$instr_count" --no-synth "${extra_args[@]}"
     fi
 done
 
